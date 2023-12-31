@@ -18,7 +18,7 @@ export PATH := $(TOOLCHAIN)/bin:$(PATH)
 endif
 endif
 
-PREFIX := arm-none-eabi-
+PREFIX := /opt/devkitpro/devkitARM/bin/arm-none-eabi-
 OBJCOPY := $(PREFIX)objcopy
 OBJDUMP := $(PREFIX)objdump
 AS := $(PREFIX)as
@@ -350,7 +350,7 @@ $(C_BUILDDIR)/pokedex_plus_hgss.o: CFLAGS := -mthumb -mthumb-interwork -O2 -mabi
 endif
 
 ifeq ($(DINFO),1)
-override CFLAGS += -g
+override CFLAGS += -O0 -g
 endif
 
 # The dep rules have to be explicit or else missing files won't be reported.
