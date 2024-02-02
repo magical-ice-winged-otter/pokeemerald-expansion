@@ -2224,7 +2224,7 @@ static void CreateDomeOpponentMon(u8 monPartyId, u16 tournamentTrainerId, u8 tou
     #ifdef BUGFIX
     u8 fixedIv = GetDomeTrainerMonIvs(DOME_TRAINERS[tournamentTrainerId].trainerId);
     #else
-    u8 fixedIv = GetDomeTrainerMonIvs(tournamentTrainerId); // BUG: Using the wrong ID. As a result, all Pokemon have ivs of 3.
+    u8 fixedIv = GetDomeTrainerMonIvs(tournamentTrainerId); // BUG: Using the wrong ID. As a result, all Pokémon have ivs of 3.
     #endif
     u8 level = SetFacilityPtrsGetLevel();
     CreateMonWithEVSpreadNatureOTID(&gEnemyParty[monPartyId],
@@ -2239,7 +2239,7 @@ static void CreateDomeOpponentMon(u8 monPartyId, u16 tournamentTrainerId, u8 tou
     {
         SetMonMoveSlot(&gEnemyParty[monPartyId],
                        gFacilityTrainerMons[DOME_MONS[tournamentTrainerId][tournamentMonId]].moves[i], i);
-        if (gFacilityTrainerMons[DOME_MONS[tournamentTrainerId][tournamentMonId]].moves[i] == MOVE_FRUSTRATION)
+        if (gBattleMoves[gFacilityTrainerMons[DOME_MONS[tournamentTrainerId][tournamentMonId]].moves[i]].effect == EFFECT_FRUSTRATION)
             friendship = 0;
     }
 
@@ -2286,13 +2286,13 @@ static void CreateDomeOpponentMons(u16 tournamentTrainerId)
     }
 }
 
-// Returns a bitmask representing which 2 of the trainer's 3 pokemon to select.
+// Returns a bitmask representing which 2 of the trainer's 3 Pokémon to select.
 // The choice is calculated solely depending on the type effectiveness of their
-// movesets against the player's pokemon.
+// movesets against the player's Pokémon.
 // There is a 50% chance of either a "good" or "bad" selection mode being used.
 // In the good mode movesets are preferred which are more effective against the
-// player, and in the bad mode the opposite is true. If all 3 pokemon tie, the
-// other mode will be tried. If they tie again, the pokemon selection is random.
+// player, and in the bad mode the opposite is true. If all 3 Pokémon tie, the
+// other mode will be tried. If they tie again, the Pokémon selection is random.
 int GetDomeTrainerSelectedMons(u16 tournamentTrainerId)
 {
     int selectedMonBits;
@@ -4041,11 +4041,10 @@ static bool32 IsDomePopularMove(u32 move)
     }
 }
 
-static bool32 IsDomeStatusMoveEffect(u32 effect)
+static bool32 IsDomeStatusMoveEffect(u32 move)
 {
-    switch(effect)
+    switch(gBattleMoves[move].effect)
     {
-    case EFFECT_TRAP:
     case EFFECT_SLEEP:
     case EFFECT_CONFUSE:
     case EFFECT_DISABLE:
@@ -4063,7 +4062,7 @@ static bool32 IsDomeStatusMoveEffect(u32 effect)
     case EFFECT_CURSE:
         return TRUE;
     default:
-        return FALSE;
+        return MoveHasMoveEffect(move, MOVE_EFFECT_WRAP);
     }
 }
 
@@ -4109,8 +4108,7 @@ static bool32 IsDomeComboMoveEffect(u32 effect)
     case EFFECT_MOONLIGHT:
     case EFFECT_SHORE_UP:
     case EFFECT_THUNDER:
-    case EFFECT_HURRICANE:
-    //case EFFECT_BLIZZARD: (needs a unique effect in gBattleMoves!)
+    case EFFECT_BLIZZARD:
     case EFFECT_SOLAR_BEAM:
     case EFFECT_GROWTH:
     case EFFECT_AURORA_VEIL:
@@ -4152,6 +4150,7 @@ static bool32 IsDomeComboMoveEffect(u32 effect)
     case EFFECT_CHARGE:
     case EFFECT_BULK_UP:
     case EFFECT_ATTACK_ACCURACY_UP:
+    case EFFECT_FILLET_AWAY:
     // Others
     case EFFECT_FOCUS_ENERGY:
     case EFFECT_LOCK_ON:
@@ -4262,8 +4261,8 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTourneyId)
     else
         j = GetFrontierOpponentClass(trainerId);
 
-    for (;gTrainerClassNames[j][i] != EOS; i++)
-        gStringVar1[i] = gTrainerClassNames[j][i];
+    for (;gTrainerClasses[j].name[i] != EOS; i++)
+        gStringVar1[i] = gTrainerClasses[j].name[i];
     gStringVar1[i] = CHAR_SPACE;
     gStringVar1[i + 1] = EOS;
 
@@ -4365,7 +4364,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTourneyId)
                     allocatedArray[k] = IsDomeRiskyMoveEffect(gBattleMoves[move].effect) ? 1 : 0;
                     break;
                 case MOVE_POINTS_STATUS:
-                    allocatedArray[k] = IsDomeStatusMoveEffect(gBattleMoves[move].effect) ? 1 : 0;
+                    allocatedArray[k] = IsDomeStatusMoveEffect(move);
                     break;
                 case MOVE_POINTS_DMG:
                     allocatedArray[k] = (gBattleMoves[move].power != 0) ? 1 : 0;
@@ -4392,7 +4391,7 @@ static void DisplayTrainerInfoOnCard(u8 flags, u8 trainerTourneyId)
                     allocatedArray[k] = (gBattleMoves[move].pp <= 5) ? 1 : 0;
                     break;
                 case MOVE_POINTS_EFFECT:
-                    allocatedArray[k] = (gBattleMoves[move].secondaryEffectChance > 0) ? 1 : 0;
+                    allocatedArray[k] = gBattleMoves[move].sheerForceBoost;
                     break;
                 }
             }
@@ -4746,7 +4745,7 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
     if (lost[1])
         gSprites[sInfoCard->spriteIds[1 + arrId]].oam.paletteNum = 3;
 
-    // Draw left trainer's pokemon icons.
+    // Draw left trainer's Pokémon icons.
     for (i = 0; i < FRONTIER_PARTY_SIZE; i++)
     {
         if (trainerIds[0] == TRAINER_PLAYER)
@@ -4786,7 +4785,7 @@ static void DisplayMatchInfoOnCard(u8 flags, u8 matchNo)
         }
     }
 
-    // Draw right trainer's pokemon icons.
+    // Draw right trainer's Pokémon icons.
     for (i = 0; i < FRONTIER_PARTY_SIZE; i++)
     {
         if (trainerIds[1] == TRAINER_PLAYER)
@@ -5137,7 +5136,7 @@ static u16 GetWinningMove(int winnerTournamentId, int loserTournamentId, u8 roun
     int movePower = 0;
     SetFacilityPtrsGetLevel();
 
-    // Calc move points of all 4 moves for all 3 pokemon hitting all 3 target mons.
+    // Calc move points of all 4 moves for all 3 Pokémon hitting all 3 target mons.
     for (i = 0; i < FRONTIER_PARTY_SIZE; i++)
     {
         for (j = 0; j < MAX_MON_MOVES; j++)
@@ -5154,8 +5153,7 @@ static u16 GetWinningMove(int winnerTournamentId, int loserTournamentId, u8 roun
                 movePower = 40;
             else if (movePower == 1)
                 movePower = 60;
-            else if (moveIds[i * MAX_MON_MOVES + j] == MOVE_SELF_DESTRUCT
-                  || moveIds[i * MAX_MON_MOVES + j] == MOVE_EXPLOSION)
+            else if (gBattleMoves[moveIds[i * MAX_MON_MOVES + j]].effect == EFFECT_EXPLOSION)
                 movePower /= 2;
 
             for (k = 0; k < FRONTIER_PARTY_SIZE; k++)

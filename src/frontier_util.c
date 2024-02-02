@@ -29,6 +29,7 @@
 #include "load_save.h"
 #include "battle_dome.h"
 #include "constants/battle_frontier.h"
+#include "constants/battle_move_effects.h"
 #include "constants/battle_pike.h"
 #include "constants/frontier_util.h"
 #include "constants/trainers.h"
@@ -326,7 +327,7 @@ static const struct FrontierBrainMon sFrontierBrainsMons[][2][FRONTIER_PARTY_SIZ
     },
     [FRONTIER_FACILITY_FACTORY] =
     {
-        // Because Factory's pokemon are random, this facility's Brain also uses random pokemon.
+        // Because Factory's Pokémon are random, this facility's Brain also uses random Pokémon.
         // What is interesting, this team is actually the one Steven uses in the multi tag battle alongside the player.
         {
             {
@@ -1947,7 +1948,7 @@ static void AppendIfValid(u16 species, u16 heldItem, u16 hp, u8 lvlMode, u8 monL
 
 // gSpecialVar_Result is the level mode before and after calls to this function
 // gSpecialVar_0x8004 is used to store the return value instead (TRUE if there are insufficient eligible mons)
-// The names of ineligible pokemon that have been caught are also buffered to print
+// The names of ineligible Pokémon that have been caught are also buffered to print
 static void CheckPartyIneligibility(void)
 {
     u16 speciesArray[PARTY_SIZE];
@@ -2462,10 +2463,7 @@ void CreateFrontierBrainPokemon(void)
 
         do
         {
-            do
-            {
-                j = Random32(); //should just be one while loop, but that doesn't match
-            } while (IsShinyOtIdPersonality(FRONTIER_BRAIN_OTID, j));
+            j = Random32(); //should just be one while loop, but that doesn't match
         } while (sFrontierBrainsMons[facility][symbol][i].nature != GetNatureFromPersonality(j));
         CreateMon(&gEnemyParty[monPartyId],
                   sFrontierBrainsMons[facility][symbol][i].species,
@@ -2480,10 +2478,12 @@ void CreateFrontierBrainPokemon(void)
         for (j = 0; j < MAX_MON_MOVES; j++)
         {
             SetMonMoveSlot(&gEnemyParty[monPartyId], sFrontierBrainsMons[facility][symbol][i].moves[j], j);
-            if (sFrontierBrainsMons[facility][symbol][i].moves[j] == MOVE_FRUSTRATION)
+            if (gBattleMoves[sFrontierBrainsMons[facility][symbol][i].moves[j]].effect == EFFECT_FRUSTRATION)
                 friendship = 0;
         }
         SetMonData(&gEnemyParty[monPartyId], MON_DATA_FRIENDSHIP, &friendship);
+        j = FALSE;
+        SetMonData(&gPlayerParty[MULTI_PARTY_SIZE + i], MON_DATA_IS_SHINY, &j);
         CalculateMonStats(&gEnemyParty[monPartyId]);
         monPartyId++;
     }

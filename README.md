@@ -22,7 +22,7 @@ Based off RHH's pokeemerald-expansion v1.7.3 https://github.com/rh-hideout/pokee
     - 2v2 Wild battles support.
     - 1v2/2v1 battles support.
     - Fairy Type (configurable).
-    - Physical/Special/Status Category Split (configurable).
+    - Physical/Special/Status Category (configurable).
     - New moves and abilities up to Scarlet and Violet.
         - Custom Contest data up to SwSh, newer moves are WIP. ([source](https://pokemonurpg.com/info/contests/rse-move-list/))
     - Mega Evolution
@@ -140,6 +140,7 @@ Based off RHH's pokeemerald-expansion v1.7.3 https://github.com/rh-hideout/pokee
             - *Support for new evolution methods*.
             - *Dark Mode*.
     - [Nature Colors](https://github.com/DizzyEggg/pokeemerald/tree/nature_color) in summary screen by @DizzyEggg
+    - [Dynamic Multichoice](https://github.com/SBird1337/pokeemerald/tree/feature/dynmulti) by @SBird1337
 - ***Other features***
     - Pressing B while holding a Pokémon drops them like in modern games (configurable).
     - Running indoors (configurable).

@@ -92,19 +92,30 @@
 	.4byte \ptr
 	.endm
 
-	.macro seteffectwithchance
+	.macro setadditionaleffects
+	1:
 	.byte 0x15
+	jumpifhalfword CMP_EQUAL, sMOVE_EFFECT, MOVE_EFFECT_CONTINUE, 1b
 	.endm
 
-	.macro seteffectprimary
+	.macro seteffectprimary moveEffect=0
+	.if \moveEffect != 0
+		setmoveeffect \moveEffect
+	.endif
 	.byte 0x16
 	.endm
 
-	.macro seteffectsecondary
+	.macro seteffectsecondary moveEffect=0
+	.if \moveEffect != 0
+		setmoveeffect \moveEffect
+	.endif
 	.byte 0x17
 	.endm
 
-	.macro clearstatusfromeffect battler:req
+	.macro clearstatusfromeffect battler:req, moveEffect=0
+	.if \moveEffect != 0
+		setmoveeffect \moveEffect
+	.endif
 	.byte 0x18
 	.byte \battler
 	.endm
@@ -764,7 +775,7 @@
 	.byte 0x8b
 	.endm
 
-	.macro confuseifrepeatingattackends
+	.macro unused0x8C
 	.byte 0x8c
 	.endm
 
@@ -980,7 +991,7 @@
 	.byte 0xbb
 	.endm
 
-	.macro maxattackhalvehp failInstr:req
+	.macro halvehp failInstr:req
 	.byte 0xbc
 	.4byte \failInstr
 	.endm
@@ -1087,8 +1098,9 @@
 	.4byte \failInstr
 	.endm
 
-	.macro trycopyability failInstr:req
+	.macro trycopyability battler:req, failInstr:req
 	.byte 0xd3
+	.byte \battler
 	.4byte \failInstr
 	.endm
 
@@ -1174,8 +1186,10 @@
 	.4byte \jumpInstr
 	.endm
 
-	.macro getsecretpowereffect
+	.macro jumpifnotcurrentmoveargtype battler:req, failInstr:req
 	.byte 0xe4
+	.byte \battler
+	.4byte \failInstr
 	.endm
 
 	.macro pickup
@@ -1310,6 +1324,15 @@
 	.macro jumpifcantfling battler:req, jumpInstr:req
 	callnative BS_JumpIfCantFling
 	.byte \battler
+	.4byte \jumpInstr
+	.endm
+	
+	.macro allyswitchswapbattlers
+	callnative BS_AllySwitchSwapBattler
+	.endm
+	
+	.macro allyswitchfailchance jumpInstr:req
+	callnative BS_AllySwitchFailChance
 	.4byte \jumpInstr
 	.endm
 
@@ -1800,8 +1823,8 @@
 	.4byte \jumpInstr
 	.endm
 
-	.macro argumentstatuseffect
-	various BS_ATTACKER, VARIOUS_ARGUMENT_STATUS_EFFECT
+	.macro setargtobattledamage
+	various BS_ATTACKER, VARIOUS_SET_ARG_TO_BATTLE_DAMAGE
 	.endm
 
 	.macro tryhitswitchtarget failInstr:req
@@ -1843,10 +1866,6 @@
 
 	.macro powertrick battler:req
 	various \battler, VARIOUS_POWER_TRICK
-	.endm
-
-	.macro argumenttomoveeffect
-	various BS_ATTACKER, VARIOUS_ARGUMENT_TO_MOVE_EFFECT
 	.endm
 
 	.macro jumpifnotgrounded battler:req, jumpInstr:req
@@ -2320,6 +2339,15 @@
 	goto \jumpInstr
 	1:
 	subbyte gBattlerTarget, 0x2
+	goto \jumpInstr
+	.endm
+
+	.macro setallytonextattacker jumpInstr:req
+	jumpifbyte CMP_GREATER_THAN, gBattlerAttacker, 0x1, 1f
+	addbyte gBattlerAttacker, 0x2
+	goto \jumpInstr
+	1:
+	subbyte gBattlerAttacker, 0x2
 	goto \jumpInstr
 	.endm
 

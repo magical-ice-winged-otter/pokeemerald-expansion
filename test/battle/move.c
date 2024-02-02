@@ -21,15 +21,15 @@ SINGLE_BATTLE_TEST("Accuracy controls the proportion of misses")
     }
 }
 
-SINGLE_BATTLE_TEST("Secondary Effect Chance controls the proportion of secondary effects")
+SINGLE_BATTLE_TEST("AdditionalEffect.chance controls the proportion of secondary effects")
 {
     u32 move;
     PARAMETRIZE { move = MOVE_THUNDER_SHOCK; }
     PARAMETRIZE { move = MOVE_DISCHARGE; }
     PARAMETRIZE { move = MOVE_NUZZLE; }
-    ASSUME(gBattleMoves[move].effect == EFFECT_PARALYZE_HIT);
-    ASSUME(0 < gBattleMoves[move].secondaryEffectChance && gBattleMoves[move].secondaryEffectChance <= 100);
-    PASSES_RANDOMLY(gBattleMoves[move].secondaryEffectChance, 100, RNG_SECONDARY_EFFECT);
+    ASSUME(MoveHasMoveEffect(move, MOVE_EFFECT_PARALYSIS) == TRUE);
+    ASSUME(0 < gBattleMoves[move].additionalEffects[0].chance && gBattleMoves[move].additionalEffects[0].chance <= 100);
+    PASSES_RANDOMLY(gBattleMoves[move].additionalEffects[0].chance, 100, RNG_SECONDARY_EFFECT);
     GIVEN {
         PLAYER(SPECIES_WOBBUFFET);
         OPPONENT(SPECIES_WOBBUFFET);
@@ -99,7 +99,7 @@ SINGLE_BATTLE_TEST("Critical hits occur at a 1/24 rate")
 SINGLE_BATTLE_TEST("Slash's critical hits occur at a 1/8 rate")
 {
     ASSUME(B_CRIT_CHANCE >= GEN_7);
-    ASSUME(gBattleMoves[MOVE_SLASH].highCritRatio);
+    ASSUME(gBattleMoves[MOVE_SLASH].criticalHitStage == 1);
     PASSES_RANDOMLY(1, 8, RNG_CRITICAL_HIT);
     GIVEN {
         PLAYER(SPECIES_WOBBUFFET);
@@ -136,7 +136,7 @@ SINGLE_BATTLE_TEST("Critical hits do not ignore positive stat stages", s16 damag
     PARAMETRIZE { move = MOVE_HOWL; }
     PARAMETRIZE { move = MOVE_TAIL_WHIP; }
     GIVEN {
-        ASSUME(gBattleMoves[MOVE_SCRATCH].split == SPLIT_PHYSICAL);
+        ASSUME(gBattleMoves[MOVE_SCRATCH].category == BATTLE_CATEGORY_PHYSICAL);
         PLAYER(SPECIES_WOBBUFFET);
         OPPONENT(SPECIES_WOBBUFFET);
     } WHEN {
@@ -157,7 +157,7 @@ SINGLE_BATTLE_TEST("Critical hits ignore negative stat stages", s16 damage)
     PARAMETRIZE { move = MOVE_HARDEN; }
     PARAMETRIZE { move = MOVE_GROWL; }
     GIVEN {
-        ASSUME(gBattleMoves[MOVE_SCRATCH].split == SPLIT_PHYSICAL);
+        ASSUME(gBattleMoves[MOVE_SCRATCH].category == BATTLE_CATEGORY_PHYSICAL);
         PLAYER(SPECIES_WOBBUFFET);
         OPPONENT(SPECIES_WOBBUFFET);
     } WHEN {

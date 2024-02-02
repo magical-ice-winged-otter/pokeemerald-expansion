@@ -94,140 +94,6 @@ static const u8 sPkblToEscapeFactor[][3] = {
 static const u8 sGoNearCounterToCatchFactor[] = {4, 3, 2, 1};
 static const u8 sGoNearCounterToEscapeFactor[] = {4, 4, 4, 4};
 
-static const u16 sSkillSwapBannedAbilities[] =
-{
-    ABILITY_WONDER_GUARD,
-    ABILITY_MULTITYPE,
-    ABILITY_ILLUSION,
-    ABILITY_STANCE_CHANGE,
-    ABILITY_SCHOOLING,
-    ABILITY_COMATOSE,
-    ABILITY_SHIELDS_DOWN,
-    ABILITY_DISGUISE,
-    ABILITY_RKS_SYSTEM,
-    ABILITY_BATTLE_BOND,
-    ABILITY_POWER_CONSTRUCT,
-    ABILITY_NEUTRALIZING_GAS,
-    ABILITY_ICE_FACE,
-    ABILITY_HUNGER_SWITCH,
-    ABILITY_GULP_MISSILE,
-    ABILITY_ZERO_TO_HERO,
-};
-
-static const u16 sRolePlayBannedAbilities[] =
-{
-    ABILITY_TRACE,
-    ABILITY_WONDER_GUARD,
-    ABILITY_FORECAST,
-    ABILITY_FLOWER_GIFT,
-    ABILITY_MULTITYPE,
-    ABILITY_ILLUSION,
-    ABILITY_ZEN_MODE,
-    ABILITY_IMPOSTER,
-    ABILITY_STANCE_CHANGE,
-    ABILITY_POWER_OF_ALCHEMY,
-    ABILITY_RECEIVER,
-    ABILITY_SCHOOLING,
-    ABILITY_COMATOSE,
-    ABILITY_SHIELDS_DOWN,
-    ABILITY_DISGUISE,
-    ABILITY_RKS_SYSTEM,
-    ABILITY_BATTLE_BOND,
-    ABILITY_POWER_CONSTRUCT,
-    ABILITY_ICE_FACE,
-    ABILITY_HUNGER_SWITCH,
-    ABILITY_GULP_MISSILE,
-    ABILITY_ZERO_TO_HERO,
-};
-
-static const u16 sRolePlayBannedAttackerAbilities[] =
-{
-    ABILITY_MULTITYPE,
-    ABILITY_ZEN_MODE,
-    ABILITY_STANCE_CHANGE,
-    ABILITY_SCHOOLING,
-    ABILITY_COMATOSE,
-    ABILITY_SHIELDS_DOWN,
-    ABILITY_DISGUISE,
-    ABILITY_RKS_SYSTEM,
-    ABILITY_BATTLE_BOND,
-    ABILITY_POWER_CONSTRUCT,
-    ABILITY_ICE_FACE,
-    ABILITY_GULP_MISSILE,
-    ABILITY_ZERO_TO_HERO,
-};
-
-static const u16 sWorrySeedBannedAbilities[] =
-{
-    ABILITY_MULTITYPE,
-    ABILITY_STANCE_CHANGE,
-    ABILITY_SCHOOLING,
-    ABILITY_COMATOSE,
-    ABILITY_SHIELDS_DOWN,
-    ABILITY_DISGUISE,
-    ABILITY_RKS_SYSTEM,
-    ABILITY_BATTLE_BOND,
-    ABILITY_POWER_CONSTRUCT,
-    ABILITY_TRUANT,
-    ABILITY_ICE_FACE,
-    ABILITY_GULP_MISSILE,
-    ABILITY_ZERO_TO_HERO,
-};
-
-static const u16 sGastroAcidBannedAbilities[] =
-{
-    ABILITY_AS_ONE_ICE_RIDER,
-    ABILITY_AS_ONE_SHADOW_RIDER,
-    ABILITY_BATTLE_BOND,
-    ABILITY_COMATOSE,
-    ABILITY_DISGUISE,
-    ABILITY_GULP_MISSILE,
-    ABILITY_ICE_FACE,
-    ABILITY_MULTITYPE,
-    ABILITY_POWER_CONSTRUCT,
-    ABILITY_RKS_SYSTEM,
-    ABILITY_SCHOOLING,
-    ABILITY_SHIELDS_DOWN,
-    ABILITY_STANCE_CHANGE,
-    ABILITY_ZEN_MODE,
-    ABILITY_ZERO_TO_HERO,
-};
-
-static const u16 sEntrainmentBannedAttackerAbilities[] =
-{
-    ABILITY_TRACE,
-    ABILITY_FORECAST,
-    ABILITY_FLOWER_GIFT,
-    ABILITY_ZEN_MODE,
-    ABILITY_ILLUSION,
-    ABILITY_IMPOSTER,
-    ABILITY_POWER_OF_ALCHEMY,
-    ABILITY_RECEIVER,
-    ABILITY_DISGUISE,
-    ABILITY_POWER_CONSTRUCT,
-    ABILITY_NEUTRALIZING_GAS,
-    ABILITY_ICE_FACE,
-    ABILITY_HUNGER_SWITCH,
-    ABILITY_GULP_MISSILE,
-    ABILITY_ZERO_TO_HERO,
-};
-
-static const u16 sEntrainmentTargetSimpleBeamBannedAbilities[] =
-{
-    ABILITY_TRUANT,
-    ABILITY_MULTITYPE,
-    ABILITY_STANCE_CHANGE,
-    ABILITY_SCHOOLING,
-    ABILITY_COMATOSE,
-    ABILITY_SHIELDS_DOWN,
-    ABILITY_DISGUISE,
-    ABILITY_RKS_SYSTEM,
-    ABILITY_BATTLE_BOND,
-    ABILITY_ICE_FACE,
-    ABILITY_GULP_MISSILE,
-    ABILITY_ZERO_TO_HERO,
-};
-
 static u8 CalcBeatUpPower(void)
 {
     u8 basePower;
@@ -343,7 +209,7 @@ void HandleAction_UseMove(void)
     if (gBattleStruct->dynamax.usingMaxMove[gBattlerAttacker])
     {
         gCurrentMove = gChosenMove = GetMaxMove(gBattlerAttacker, gCurrentMove);
-        gBattleStruct->dynamax.activeSplit = gBattleStruct->dynamax.splits[gBattlerAttacker];
+        gBattleStruct->dynamax.activeCategory = gBattleStruct->dynamax.categories[gBattlerAttacker];
     }
 
     moveTarget = GetBattlerMoveTargetType(gBattlerAttacker, gCurrentMove);
@@ -519,6 +385,11 @@ void HandleAction_UseMove(void)
             gBattleCommunication[MULTISTRING_CHOOSER] = B_MSG_INCAPABLE_OF_POWER;
             gBattlescriptCurrInstr = BattleScript_MoveUsedLoafingAround;
         }
+    }
+    // Edge case: moves targeting the ally fail after a successful Ally Switch.
+    else if (moveTarget == MOVE_TARGET_ALLY && gProtectStructs[BATTLE_PARTNER(gBattlerAttacker)].usedAllySwitch)
+    {
+        gBattlescriptCurrInstr = BattleScript_FailedFromAtkCanceler;
     }
     else
     {
@@ -883,124 +754,18 @@ void HandleAction_ActionFinished(void)
                 // have been executed before. The only recalculation needed is for moves/switch. Mega evolution is handled in src/battle_main.c/TryChangeOrder
                 if((gActionsByTurnOrder[i] == B_ACTION_USE_MOVE && gActionsByTurnOrder[j] == B_ACTION_USE_MOVE))
                 {
-                    if (GetWhichBattlerFaster(battler1, battler2, FALSE))
+                    if (GetWhichBattlerFaster(battler1, battler2, FALSE) == -1)
                         SwapTurnOrder(i, j);
                 }
                 else if ((gActionsByTurnOrder[i] == B_ACTION_SWITCH && gActionsByTurnOrder[j] == B_ACTION_SWITCH))
                 {
-                    if (GetWhichBattlerFaster(battler1, battler2, TRUE)) // If the actions chosen are switching, we recalc order but ignoring the moves
+                    if (GetWhichBattlerFaster(battler1, battler2, TRUE) == -1) // If the actions chosen are switching, we recalc order but ignoring the moves
                         SwapTurnOrder(i, j);
                 }
             }
         }
     }
 }
-
-static const u8 sAbilitiesAffectedByMoldBreaker[] =
-{
-    [ABILITY_BATTLE_ARMOR] = 1,
-    [ABILITY_CLEAR_BODY] = 1,
-    [ABILITY_DAMP] = 1,
-    [ABILITY_DRY_SKIN] = 1,
-    [ABILITY_FILTER] = 1,
-    [ABILITY_FLASH_FIRE] = 1,
-    [ABILITY_FLOWER_GIFT] = 1,
-    [ABILITY_HEATPROOF] = 1,
-    [ABILITY_HYPER_CUTTER] = 1,
-    [ABILITY_IMMUNITY] = 1,
-    [ABILITY_INNER_FOCUS] = 1,
-    [ABILITY_INSOMNIA] = 1,
-    [ABILITY_KEEN_EYE] = 1,
-    [ABILITY_LEAF_GUARD] = 1,
-    [ABILITY_LEVITATE] = 1,
-    [ABILITY_LIGHTNING_ROD] = 1,
-    [ABILITY_LIMBER] = 1,
-    [ABILITY_MAGMA_ARMOR] = 1,
-    [ABILITY_MARVEL_SCALE] = 1,
-    [ABILITY_MOTOR_DRIVE] = 1,
-    [ABILITY_OBLIVIOUS] = 1,
-    [ABILITY_OWN_TEMPO] = 1,
-    [ABILITY_SAND_VEIL] = 1,
-    [ABILITY_SHELL_ARMOR] = 1,
-    [ABILITY_SHIELD_DUST] = 1,
-    [ABILITY_SIMPLE] = 1,
-    [ABILITY_SNOW_CLOAK] = 1,
-    [ABILITY_SOLID_ROCK] = 1,
-    [ABILITY_SOUNDPROOF] = 1,
-    [ABILITY_STICKY_HOLD] = 1,
-    [ABILITY_STORM_DRAIN] = 1,
-    [ABILITY_STURDY] = 1,
-    [ABILITY_SUCTION_CUPS] = 1,
-    [ABILITY_TANGLED_FEET] = 1,
-    [ABILITY_THICK_FAT] = 1,
-    [ABILITY_UNAWARE] = 1,
-    [ABILITY_VITAL_SPIRIT] = 1,
-    [ABILITY_VOLT_ABSORB] = 1,
-    [ABILITY_WATER_ABSORB] = 1,
-    [ABILITY_WATER_VEIL] = 1,
-    [ABILITY_WHITE_SMOKE] = 1,
-    [ABILITY_WONDER_GUARD] = 1,
-    [ABILITY_BIG_PECKS] = 1,
-    [ABILITY_CONTRARY] = 1,
-    [ABILITY_FRIEND_GUARD] = 1,
-    [ABILITY_HEAVY_METAL] = 1,
-    [ABILITY_LIGHT_METAL] = 1,
-    [ABILITY_MAGIC_BOUNCE] = 1,
-    [ABILITY_MULTISCALE] = 1,
-    [ABILITY_SAP_SIPPER] = 1,
-    [ABILITY_TELEPATHY] = 1,
-    [ABILITY_WONDER_SKIN] = 1,
-    [ABILITY_AROMA_VEIL] = 1,
-    [ABILITY_BULLETPROOF] = 1,
-    [ABILITY_FLOWER_VEIL] = 1,
-    [ABILITY_FUR_COAT] = 1,
-    [ABILITY_OVERCOAT] = 1,
-    [ABILITY_SWEET_VEIL] = 1,
-    [ABILITY_DAZZLING] = 1,
-    [ABILITY_DISGUISE] = 1,
-    [ABILITY_FLUFFY] = 1,
-    [ABILITY_QUEENLY_MAJESTY] = 1,
-    [ABILITY_WATER_BUBBLE] = 1,
-    [ABILITY_MIRROR_ARMOR] = 1,
-    [ABILITY_PUNK_ROCK] = 1,
-    [ABILITY_ICE_SCALES] = 1,
-    [ABILITY_ICE_FACE] = 1,
-    [ABILITY_PASTEL_VEIL] = 1,
-    [ABILITY_ARMOR_TAIL] = 1,
-    [ABILITY_EARTH_EATER] = 1,
-    [ABILITY_GOOD_AS_GOLD] = 1,
-    [ABILITY_PURIFYING_SALT] = 1,
-    [ABILITY_WELL_BAKED_BODY] = 1,
-};
-
-static const u8 sAbilitiesNotTraced[ABILITIES_COUNT] =
-{
-    [ABILITY_AS_ONE_ICE_RIDER] = 1,
-    [ABILITY_AS_ONE_SHADOW_RIDER] = 1,
-    [ABILITY_BATTLE_BOND] = 1,
-    [ABILITY_COMATOSE] = 1,
-    [ABILITY_DISGUISE] = 1,
-    [ABILITY_FLOWER_GIFT] = 1,
-    [ABILITY_FORECAST] = 1,
-    [ABILITY_GULP_MISSILE] = 1,
-    [ABILITY_HUNGER_SWITCH] = 1,
-    [ABILITY_ICE_FACE] = 1,
-    [ABILITY_ILLUSION] = 1,
-    [ABILITY_IMPOSTER] = 1,
-    [ABILITY_MULTITYPE] = 1,
-    [ABILITY_NEUTRALIZING_GAS] = 1,
-    [ABILITY_NONE] = 1,
-    [ABILITY_POWER_CONSTRUCT] = 1,
-    [ABILITY_POWER_OF_ALCHEMY] = 1,
-    [ABILITY_RECEIVER] = 1,
-    [ABILITY_RKS_SYSTEM] = 1,
-    [ABILITY_SCHOOLING] = 1,
-    [ABILITY_SHIELDS_DOWN] = 1,
-    [ABILITY_STANCE_CHANGE] = 1,
-    [ABILITY_TRACE] = 1,
-    [ABILITY_ZEN_MODE] = 1,
-    [ABILITY_ZERO_TO_HERO] = 1,
-};
 
 static const u8 sHoldEffectToType[][2] =
 {
@@ -1498,7 +1263,7 @@ bool32 IsHealBlockPreventingMove(u32 battler, u32 move)
     if (!(gStatuses3[battler] & STATUS3_HEAL_BLOCK))
         return FALSE;
 
-    return gBattleMoves[move].healBlockBanned;
+    return gBattleMoves[move].healingMove;
 }
 
 static bool32 IsBelchPreventingMove(u32 battler, u32 move)
@@ -1644,7 +1409,7 @@ u32 TrySetCantSelectMoveBattleScript(u32 battler)
         }
     }
 
-    if (DYNAMAX_BYPASS_CHECK && move == MOVE_STUFF_CHEEKS && ItemId_GetPocket(gBattleMons[battler].item) != POCKET_BERRIES)
+    if (DYNAMAX_BYPASS_CHECK && gBattleMoves[move].effect == EFFECT_STUFF_CHEEKS && ItemId_GetPocket(gBattleMons[battler].item) != POCKET_BERRIES)
     {
         gCurrentMove = move;
         if (gBattleTypeFlags & BATTLE_TYPE_PALACE)
@@ -1691,7 +1456,7 @@ u32 TrySetCantSelectMoveBattleScript(u32 battler)
             limitations++;
         }
     }
-    else if (holdEffect == HOLD_EFFECT_ASSAULT_VEST && IS_MOVE_STATUS(move) && move != MOVE_ME_FIRST)
+    else if (holdEffect == HOLD_EFFECT_ASSAULT_VEST && IS_MOVE_STATUS(move) && gBattleMoves[move].effect != EFFECT_ME_FIRST)
     {
         if (IsDynamaxed(gBattlerAttacker))
             gCurrentMove = MOVE_MAX_GUARD;
@@ -1758,7 +1523,8 @@ u32 TrySetCantSelectMoveBattleScript(u32 battler)
 
 u8 CheckMoveLimitations(u32 battler, u8 unusableMoves, u16 check)
 {
-    u8 holdEffect = GetBattlerHoldEffect(battler, TRUE);
+    u32 move, moveEffect;
+    u32 holdEffect = GetBattlerHoldEffect(battler, TRUE);
     u16 *choicedMove = &gBattleStruct->choicedMove[battler];
     s32 i;
 
@@ -1766,56 +1532,58 @@ u8 CheckMoveLimitations(u32 battler, u8 unusableMoves, u16 check)
 
     for (i = 0; i < MAX_MON_MOVES; i++)
     {
+        move = gBattleMons[battler].moves[i];
+        moveEffect = gBattleMoves[move].effect;
         // No move
-        if (check & MOVE_LIMITATION_ZEROMOVE && gBattleMons[battler].moves[i] == MOVE_NONE)
+        if (check & MOVE_LIMITATION_ZEROMOVE && move == MOVE_NONE)
             unusableMoves |= gBitTable[i];
         // No PP
         else if (check & MOVE_LIMITATION_PP && gBattleMons[battler].pp[i] == 0)
             unusableMoves |= gBitTable[i];
         // Placeholder
-        else if (check & MOVE_LIMITATION_PLACEHOLDER && gBattleMoves[gBattleMons[battler].moves[i]].effect == EFFECT_PLACEHOLDER)
+        else if (check & MOVE_LIMITATION_PLACEHOLDER && moveEffect == EFFECT_PLACEHOLDER)
             unusableMoves |= gBitTable[i];
         // Disable
-        else if (check & MOVE_LIMITATION_DISABLED && gBattleMons[battler].moves[i] == gDisableStructs[battler].disabledMove)
+        else if (check & MOVE_LIMITATION_DISABLED && move == gDisableStructs[battler].disabledMove)
             unusableMoves |= gBitTable[i];
         // Torment
-        else if (check & MOVE_LIMITATION_TORMENTED && gBattleMons[battler].moves[i] == gLastMoves[battler] && gBattleMons[battler].status2 & STATUS2_TORMENT)
+        else if (check & MOVE_LIMITATION_TORMENTED && move == gLastMoves[battler] && gBattleMons[battler].status2 & STATUS2_TORMENT)
             unusableMoves |= gBitTable[i];
         // Taunt
-        else if (check & MOVE_LIMITATION_TAUNT && gDisableStructs[battler].tauntTimer && IS_MOVE_STATUS(gBattleMons[battler].moves[i]))
+        else if (check & MOVE_LIMITATION_TAUNT && gDisableStructs[battler].tauntTimer && IS_MOVE_STATUS(move))
             unusableMoves |= gBitTable[i];
         // Imprison
-        else if (check & MOVE_LIMITATION_IMPRISON && GetImprisonedMovesCount(battler, gBattleMons[battler].moves[i]))
+        else if (check & MOVE_LIMITATION_IMPRISON && GetImprisonedMovesCount(battler, move))
             unusableMoves |= gBitTable[i];
         // Encore
-        else if (check & MOVE_LIMITATION_ENCORE && gDisableStructs[battler].encoreTimer && gDisableStructs[battler].encoredMove != gBattleMons[battler].moves[i])
+        else if (check & MOVE_LIMITATION_ENCORE && gDisableStructs[battler].encoreTimer && gDisableStructs[battler].encoredMove != move)
             unusableMoves |= gBitTable[i];
         // Choice Items
-        else if (check & MOVE_LIMITATION_CHOICE_ITEM && HOLD_EFFECT_CHOICE(holdEffect) && *choicedMove != MOVE_NONE && *choicedMove != MOVE_UNAVAILABLE && *choicedMove != gBattleMons[battler].moves[i])
+        else if (check & MOVE_LIMITATION_CHOICE_ITEM && HOLD_EFFECT_CHOICE(holdEffect) && *choicedMove != MOVE_NONE && *choicedMove != MOVE_UNAVAILABLE && *choicedMove != move)
             unusableMoves |= gBitTable[i];
         // Assault Vest
-        else if (check & MOVE_LIMITATION_ASSAULT_VEST && holdEffect == HOLD_EFFECT_ASSAULT_VEST && IS_MOVE_STATUS(gBattleMons[battler].moves[i]) && gBattleMons[battler].moves[i] != MOVE_ME_FIRST)
+        else if (check & MOVE_LIMITATION_ASSAULT_VEST && holdEffect == HOLD_EFFECT_ASSAULT_VEST && IS_MOVE_STATUS(move) && gBattleMoves[move].effect != EFFECT_ME_FIRST)
             unusableMoves |= gBitTable[i];
         // Gravity
-        else if (check & MOVE_LIMITATION_GRAVITY && IsGravityPreventingMove(gBattleMons[battler].moves[i]))
+        else if (check & MOVE_LIMITATION_GRAVITY && IsGravityPreventingMove(move))
             unusableMoves |= gBitTable[i];
         // Heal Block
-        else if (check & MOVE_LIMITATION_HEAL_BLOCK && IsHealBlockPreventingMove(battler, gBattleMons[battler].moves[i]))
+        else if (check & MOVE_LIMITATION_HEAL_BLOCK && IsHealBlockPreventingMove(battler, move))
             unusableMoves |= gBitTable[i];
         // Belch
-        else if (check & MOVE_LIMITATION_BELCH && IsBelchPreventingMove(battler, gBattleMons[battler].moves[i]))
+        else if (check & MOVE_LIMITATION_BELCH && IsBelchPreventingMove(battler, move))
             unusableMoves |= gBitTable[i];
         // Throat Chop
-        else if (check & MOVE_LIMITATION_THROAT_CHOP && gDisableStructs[battler].throatChopTimer && gBattleMoves[gBattleMons[battler].moves[i]].soundMove)
+        else if (check & MOVE_LIMITATION_THROAT_CHOP && gDisableStructs[battler].throatChopTimer && gBattleMoves[move].soundMove)
             unusableMoves |= gBitTable[i];
         // Stuff Cheeks
-        else if (check & MOVE_LIMITATION_STUFF_CHEEKS && gBattleMons[battler].moves[i] == MOVE_STUFF_CHEEKS && ItemId_GetPocket(gBattleMons[battler].item) != POCKET_BERRIES)
+        else if (check & MOVE_LIMITATION_STUFF_CHEEKS && moveEffect == EFFECT_STUFF_CHEEKS && ItemId_GetPocket(gBattleMons[battler].item) != POCKET_BERRIES)
             unusableMoves |= gBitTable[i];
         // Gorilla Tactics
-        else if (check & MOVE_LIMITATION_CHOICE_ITEM && GetBattlerAbility(battler) == ABILITY_GORILLA_TACTICS && *choicedMove != MOVE_NONE && *choicedMove != MOVE_UNAVAILABLE && *choicedMove != gBattleMons[battler].moves[i])
+        else if (check & MOVE_LIMITATION_CHOICE_ITEM && GetBattlerAbility(battler) == ABILITY_GORILLA_TACTICS && *choicedMove != MOVE_NONE && *choicedMove != MOVE_UNAVAILABLE && *choicedMove != move)
             unusableMoves |= gBitTable[i];
         // Can't Use Twice flag
-        else if (check & MOVE_LIMITATION_CANT_USE_TWICE && gBattleMoves[gBattleMons[battler].moves[i]].cantUseTwice && gBattleMons[battler].moves[i] == gLastResultingMoves[battler])
+        else if (check & MOVE_LIMITATION_CANT_USE_TWICE && gBattleMoves[move].cantUseTwice && move == gLastResultingMoves[battler])
             unusableMoves |= gBitTable[i];
     }
     return unusableMoves;
@@ -1980,7 +1748,7 @@ u8 DoFieldEndTurnEffects(void)
                 {
                     if (!gProtectStructs[i].quash
                             && !gProtectStructs[j].quash
-                            && GetWhichBattlerFaster(gBattlerByTurnOrder[i], gBattlerByTurnOrder[j], FALSE))
+                            && GetWhichBattlerFaster(gBattlerByTurnOrder[i], gBattlerByTurnOrder[j], FALSE) == -1)
                         SwapTurnOrder(i, j);
                 }
             }
@@ -2779,7 +2547,7 @@ u8 DoBattlerEndTurnEffects(void)
             {
                 MAGIC_GUARD_CHECK;
                 // R/S does not perform this sleep check, which causes the nightmare effect to
-                // persist even after the affected Pokemon has been awakened by Shed Skin.
+                // persist even after the affected Pokémon has been awakened by Shed Skin.
                 if (gBattleMons[battler].status1 & STATUS1_SLEEP)
                 {
                     gBattleMoveDamage = GetNonDynamaxMaxHP(battler) / 4;
@@ -2868,7 +2636,7 @@ u8 DoBattlerEndTurnEffects(void)
                 }
                 if (gBattlerAttacker != gBattlersCount)
                 {
-                    effect = 2;  // a pokemon was awaken
+                    effect = 2;  // a Pokémon was awaken
                     break;
                 }
                 else
@@ -2911,7 +2679,7 @@ u8 DoBattlerEndTurnEffects(void)
                     if (!(gBattleMons[battler].status2 & STATUS2_CONFUSION))
                     {
                         gBattleScripting.moveEffect = MOVE_EFFECT_CONFUSION | MOVE_EFFECT_AFFECTS_USER;
-                        SetMoveEffect(TRUE, 0);
+                        SetMoveEffect(TRUE, FALSE);
                         if (gBattleMons[battler].status2 & STATUS2_CONFUSION)
                             BattleScriptExecute(BattleScript_ThrashConfuses);
                         effect++;
@@ -2932,7 +2700,7 @@ u8 DoBattlerEndTurnEffects(void)
                     if (gDisableStructs[battler].disabledMove == gBattleMons[battler].moves[i])
                         break;
                 }
-                if (i == MAX_MON_MOVES)  // pokemon does not have the disabled move anymore
+                if (i == MAX_MON_MOVES)  // Pokémon does not have the disabled move anymore
                 {
                     gDisableStructs[battler].disabledMove = 0;
                     gDisableStructs[battler].disableTimer = 0;
@@ -2949,7 +2717,7 @@ u8 DoBattlerEndTurnEffects(void)
         case ENDTURN_ENCORE:  // encore
             if (gDisableStructs[battler].encoreTimer != 0)
             {
-                if (gBattleMons[battler].moves[gDisableStructs[battler].encoredMovePos] != gDisableStructs[battler].encoredMove)  // pokemon does not have the encored move anymore
+                if (gBattleMons[battler].moves[gDisableStructs[battler].encoredMovePos] != gDisableStructs[battler].encoredMove)  // Pokémon does not have the encored move anymore
                 {
                     gDisableStructs[battler].encoredMove = 0;
                     gDisableStructs[battler].encoreTimer = 0;
@@ -3694,7 +3462,7 @@ u8 AtkCanceller_UnableToUseMove(u32 moveType)
         case CANCELLER_THAW: // move thawing
             if (gBattleMons[gBattlerAttacker].status1 & STATUS1_FREEZE)
             {
-                if (!(gBattleMoves[gCurrentMove].effect == EFFECT_BURN_UP && !IS_BATTLER_OF_TYPE(gBattlerAttacker, TYPE_FIRE)))
+                if (!(MoveHasMoveEffectSelfArg(gCurrentMove, MOVE_EFFECT_REMOVE_ARG_TYPE, TYPE_FIRE) && !IS_BATTLER_OF_TYPE(gBattlerAttacker, TYPE_FIRE)))
                 {
                     gBattleMons[gBattlerAttacker].status1 &= ~STATUS1_FREEZE;
                     BattleScriptPushCursor();
@@ -3705,7 +3473,7 @@ u8 AtkCanceller_UnableToUseMove(u32 moveType)
             }
             if (gBattleMons[gBattlerAttacker].status1 & STATUS1_FROSTBITE && gBattleMoves[gCurrentMove].thawsUser)
             {
-                if (!(gBattleMoves[gCurrentMove].effect == EFFECT_BURN_UP && !IS_BATTLER_OF_TYPE(gBattlerAttacker, TYPE_FIRE)))
+                if (!(MoveHasMoveEffectSelfArg(gCurrentMove, MOVE_EFFECT_REMOVE_ARG_TYPE, TYPE_FIRE) && !IS_BATTLER_OF_TYPE(gBattlerAttacker, TYPE_FIRE)))
                 {
                     gBattleMons[gBattlerAttacker].status1 &= ~STATUS1_FROSTBITE;
                     BattleScriptPushCursor();
@@ -3769,16 +3537,16 @@ u8 AtkCanceller_UnableToUseMove(u32 moveType)
             {
                 //attacker has a queued z move
                 gBattleStruct->zmove.active = TRUE;
-                gBattleStruct->zmove.activeSplit = gBattleStruct->zmove.splits[gBattlerAttacker];
+                gBattleStruct->zmove.activeCategory = gBattleStruct->zmove.categories[gBattlerAttacker];
                 RecordItemEffectBattle(gBattlerAttacker, HOLD_EFFECT_Z_CRYSTAL);
                 gBattleStruct->zmove.used[gBattlerAttacker] = TRUE;
                 if ((gBattleTypeFlags & BATTLE_TYPE_DOUBLE) && IsPartnerMonFromSameTrainer(gBattlerAttacker))
                     gBattleStruct->zmove.used[BATTLE_PARTNER(gBattlerAttacker)] = TRUE; //if 1v1 double, set partner used flag as well
 
                 gBattleScripting.battler = gBattlerAttacker;
-                if (gBattleStruct->zmove.activeSplit == SPLIT_STATUS)
+                if (gBattleStruct->zmove.activeCategory == BATTLE_CATEGORY_STATUS)
                 {
-                    gBattleStruct->zmove.effect = gBattleMoves[gBattleStruct->zmove.baseMoves[gBattlerAttacker]].zMoveEffect;
+                    gBattleStruct->zmove.effect = gBattleMoves[gBattleStruct->zmove.baseMoves[gBattlerAttacker]].zMove.effect;
                     BattleScriptPushCursor();
                     gBattlescriptCurrInstr = BattleScript_ZMoveActivateStatus;
                 }
@@ -4227,6 +3995,7 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
     u32 moveType, move;
     u32 side;
     u32 i, j;
+    u32 partner;
     struct Pokemon *mon;
 
     if (gBattleTypeFlags & BATTLE_TYPE_SAFARI)
@@ -4713,6 +4482,7 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
             if (!gSpecialStatuses[battler].switchInAbilityDone && CompareStat(battler, STAT_ATK, MAX_STAT_STAGE, CMP_LESS_THAN)
                  && !(gBattleStruct->intrepidSwordBoost[GetBattlerSide(battler)] & gBitTable[gBattlerPartyIndexes[battler]]))
             {
+                gBattleScripting.savedBattler = gBattlerAttacker;
                 gBattlerAttacker = battler;
                 if (B_INTREPID_SWORD == GEN_9)
                     gBattleStruct->intrepidSwordBoost[GetBattlerSide(battler)] |= gBitTable[gBattlerPartyIndexes[battler]];
@@ -4726,6 +4496,7 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
             if (!gSpecialStatuses[battler].switchInAbilityDone && CompareStat(battler, STAT_DEF, MAX_STAT_STAGE, CMP_LESS_THAN)
                  && !(gBattleStruct->dauntlessShieldBoost[GetBattlerSide(battler)] & gBitTable[gBattlerPartyIndexes[battler]]))
             {
+                gBattleScripting.savedBattler = gBattlerAttacker;
                 gBattlerAttacker = battler;
                 if (B_DAUNTLESS_SHIELD == GEN_9)
                     gBattleStruct->dauntlessShieldBoost[GetBattlerSide(battler)] |= gBitTable[gBattlerPartyIndexes[battler]];
@@ -4833,6 +4604,46 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
                 gSpecialStatuses[battler].switchInAbilityDone = TRUE;
                 gBattleStruct->transformZeroToHero[side] |= gBitTable[gBattlerPartyIndexes[battler]];
                 BattleScriptPushCursorAndCallback(BattleScript_ZeroToHeroActivates);
+                effect++;
+            }
+            break;
+        case ABILITY_HOSPITALITY:
+            partner = BATTLE_PARTNER(battler);
+
+            if (!gSpecialStatuses[battler].switchInAbilityDone && IsDoubleBattle() && gBattleMons[partner].hp < gBattleMons[partner].maxHP)
+            {
+                gBattlerTarget = partner;
+                gSpecialStatuses[battler].switchInAbilityDone = TRUE;
+                gBattleMoveDamage = (GetNonDynamaxMaxHP(partner) / 4) * -1;
+                BattleScriptPushCursorAndCallback(BattleScript_HospitalityActivates);
+                effect++;
+            }
+            break;
+        case ABILITY_EMBODY_ASPECT_TEAL:
+        case ABILITY_EMBODY_ASPECT_HEARTHFLAME:
+        case ABILITY_EMBODY_ASPECT_WELLSPRING:
+        case ABILITY_EMBODY_ASPECT_CORNERSTONE:
+            if (!gSpecialStatuses[battler].switchInAbilityDone)
+            {
+                u32 stat = STAT_SPATK;
+
+                if (gLastUsedAbility == ABILITY_EMBODY_ASPECT_TEAL)
+                    stat = STAT_SPATK;
+                else if (gLastUsedAbility == ABILITY_EMBODY_ASPECT_HEARTHFLAME)
+                    stat = STAT_ATK;
+                else if (gLastUsedAbility == ABILITY_EMBODY_ASPECT_WELLSPRING)
+                    stat = STAT_SPDEF;
+                else if (gLastUsedAbility == ABILITY_EMBODY_ASPECT_CORNERSTONE)
+                    stat = STAT_DEF;
+
+                if (CompareStat(battler, stat, MAX_STAT_STAGE, CMP_EQUAL))
+                    break;
+
+                gBattleScripting.savedBattler = gBattlerAttacker;
+                gBattlerAttacker = battler;
+                gSpecialStatuses[battler].switchInAbilityDone = TRUE;
+                SET_STATCHANGER(stat, 1, FALSE);
+                BattleScriptPushCursorAndCallback(BattleScript_BattlerAbilityStatRaiseOnSwitchIn);
                 effect++;
             }
             break;
@@ -5327,34 +5138,22 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
              && IsBattlerAlive(gBattlerAttacker)
              && TARGET_TURN_DAMAGED
              && IsMoveMakingContact(move, gBattlerAttacker)
-             && gBattleStruct->overwrittenAbilities[gBattlerAttacker] != GetBattlerAbility(gBattlerTarget))
+             && gBattleStruct->overwrittenAbilities[gBattlerAttacker] != GetBattlerAbility(gBattlerTarget)
+             && gBattleMons[gBattlerTarget].ability != ABILITY_MUMMY
+             && gBattleMons[gBattlerTarget].ability != ABILITY_LINGERING_AROMA
+             && !gAbilities[gBattleMons[gBattlerTarget].ability].cantBeSuppressed)
             {
-                switch (gBattleMons[gBattlerAttacker].ability)
+                if (GetBattlerHoldEffect(gBattlerAttacker, TRUE) == HOLD_EFFECT_ABILITY_SHIELD)
                 {
-                case ABILITY_MUMMY:
-                case ABILITY_BATTLE_BOND:
-                case ABILITY_COMATOSE:
-                case ABILITY_DISGUISE:
-                case ABILITY_MULTITYPE:
-                case ABILITY_POWER_CONSTRUCT:
-                case ABILITY_RKS_SYSTEM:
-                case ABILITY_SCHOOLING:
-                case ABILITY_SHIELDS_DOWN:
-                case ABILITY_STANCE_CHANGE:
-                    break;
-                default:
-                    if (GetBattlerHoldEffect(gBattlerAttacker, TRUE) == HOLD_EFFECT_ABILITY_SHIELD)
-                    {
-                        RecordItemEffectBattle(gBattlerAttacker, HOLD_EFFECT_ABILITY_SHIELD);
-                        break;
-                    }
-
-                    gLastUsedAbility = gBattleMons[gBattlerAttacker].ability = gBattleStruct->overwrittenAbilities[gBattlerAttacker] = gBattleMons[gBattlerTarget].ability;
-                    BattleScriptPushCursor();
-                    gBattlescriptCurrInstr = BattleScript_MummyActivates;
-                    effect++;
+                    RecordItemEffectBattle(gBattlerAttacker, HOLD_EFFECT_ABILITY_SHIELD);
                     break;
                 }
+
+                gLastUsedAbility = gBattleMons[gBattlerAttacker].ability = gBattleStruct->overwrittenAbilities[gBattlerAttacker] = gBattleMons[gBattlerTarget].ability;
+                BattleScriptPushCursor();
+                gBattlescriptCurrInstr = BattleScript_MummyActivates;
+                effect++;
+                break;
             }
             break;
         case ABILITY_WANDERING_SPIRIT:
@@ -5362,40 +5161,22 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
              && IsBattlerAlive(gBattlerAttacker)
              && TARGET_TURN_DAMAGED
              && IsMoveMakingContact(move, gBattlerAttacker)
-             && !IsDynamaxed(gBattlerTarget))
+             && !IsDynamaxed(gBattlerTarget)
+             && !gAbilities[gBattleMons[gBattlerAttacker].ability].cantBeSwapped)
             {
-                switch (gBattleMons[gBattlerAttacker].ability)
+                if (GetBattlerHoldEffect(gBattlerAttacker, TRUE) == HOLD_EFFECT_ABILITY_SHIELD)
                 {
-                case ABILITY_DISGUISE:
-                case ABILITY_FLOWER_GIFT:
-                case ABILITY_GULP_MISSILE:
-                case ABILITY_HUNGER_SWITCH:
-                case ABILITY_ICE_FACE:
-                case ABILITY_ILLUSION:
-                case ABILITY_IMPOSTER:
-                case ABILITY_RECEIVER:
-                case ABILITY_RKS_SYSTEM:
-                case ABILITY_SCHOOLING:
-                case ABILITY_STANCE_CHANGE:
-                case ABILITY_WONDER_GUARD:
-                case ABILITY_ZEN_MODE:
-                case ABILITY_ZERO_TO_HERO:
-                    break;
-                default:
-                    if (GetBattlerHoldEffect(gBattlerAttacker, TRUE) == HOLD_EFFECT_ABILITY_SHIELD)
-                    {
-                        RecordItemEffectBattle(gBattlerAttacker, HOLD_EFFECT_ABILITY_SHIELD);
-                        break;
-                    }
-
-                    gLastUsedAbility = gBattleMons[gBattlerAttacker].ability;
-                    gBattleMons[gBattlerAttacker].ability = gBattleStruct->overwrittenAbilities[gBattlerAttacker] = gBattleMons[gBattlerTarget].ability;
-                    gBattleMons[gBattlerTarget].ability = gBattleStruct->overwrittenAbilities[gBattlerTarget] = gLastUsedAbility;
-                    BattleScriptPushCursor();
-                    gBattlescriptCurrInstr = BattleScript_WanderingSpiritActivates;
-                    effect++;
+                    RecordItemEffectBattle(gBattlerAttacker, HOLD_EFFECT_ABILITY_SHIELD);
                     break;
                 }
+
+                gLastUsedAbility = gBattleMons[gBattlerAttacker].ability;
+                gBattleMons[gBattlerAttacker].ability = gBattleStruct->overwrittenAbilities[gBattlerAttacker] = gBattleMons[gBattlerTarget].ability;
+                gBattleMons[gBattlerTarget].ability = gBattleStruct->overwrittenAbilities[gBattlerTarget] = gLastUsedAbility;
+                BattleScriptPushCursor();
+                gBattlescriptCurrInstr = BattleScript_WanderingSpiritActivates;
+                effect++;
+                break;
             }
             break;
         case ABILITY_ANGER_POINT:
@@ -5801,13 +5582,11 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
              && !gProtectStructs[gBattlerAttacker].confusionSelfDmg
              && RandomWeighted(RNG_STENCH, 9, 1)
              && !IS_MOVE_STATUS(move)
-             && gBattleMoves[gCurrentMove].effect != EFFECT_FLINCH_HIT
-             && gBattleMoves[gCurrentMove].effect != EFFECT_FLINCH_STATUS
-             && gBattleMoves[gCurrentMove].effect != EFFECT_TRIPLE_ARROWS)
+             && !MoveHasMoveEffect(gCurrentMove, MOVE_EFFECT_FLINCH))
             {
                 gBattleScripting.moveEffect = MOVE_EFFECT_FLINCH;
                 BattleScriptPushCursor();
-                SetMoveEffect(FALSE, 0);
+                SetMoveEffect(FALSE, FALSE);
                 BattleScriptPop();
                 effect++;
             }
@@ -6014,23 +5793,23 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
             if (gBattleMons[i].ability == ABILITY_TRACE && (gBattleResources->flags->flags[i] & RESOURCE_FLAG_TRACED))
             {
                 u32 chosenTarget;
-                u32 side = (BATTLE_OPPOSITE(GetBattlerPosition(i))) & BIT_SIDE; // side of the opposing pokemon
+                u32 side = (BATTLE_OPPOSITE(GetBattlerPosition(i))) & BIT_SIDE; // side of the opposing Pokémon
                 u32 target1 = GetBattlerAtPosition(side);
                 u32 target2 = GetBattlerAtPosition(side + BIT_FLANK);
 
                 if (gBattleTypeFlags & BATTLE_TYPE_DOUBLE)
                 {
-                    if (!sAbilitiesNotTraced[gBattleMons[target1].ability] && gBattleMons[target1].hp != 0
-                     && !sAbilitiesNotTraced[gBattleMons[target2].ability] && gBattleMons[target2].hp != 0)
+                    if (!gAbilities[gBattleMons[target1].ability].cantBeTraced && gBattleMons[target1].hp != 0
+                     && !gAbilities[gBattleMons[target2].ability].cantBeTraced && gBattleMons[target2].hp != 0)
                         chosenTarget = GetBattlerAtPosition((RandomPercentage(RNG_TRACE, 50) * 2) | side), effect++;
-                    else if (!sAbilitiesNotTraced[gBattleMons[target1].ability] && gBattleMons[target1].hp != 0)
+                    else if (!gAbilities[gBattleMons[target1].ability].cantBeTraced && gBattleMons[target1].hp != 0)
                         chosenTarget = target1, effect++;
-                    else if (!sAbilitiesNotTraced[gBattleMons[target2].ability] && gBattleMons[target2].hp != 0)
+                    else if (!gAbilities[gBattleMons[target2].ability].cantBeTraced && gBattleMons[target2].hp != 0)
                         chosenTarget = target2, effect++;
                 }
                 else
                 {
-                    if (!sAbilitiesNotTraced[gBattleMons[target1].ability] && gBattleMons[target1].hp != 0)
+                    if (!gAbilities[gBattleMons[target1].ability].cantBeTraced && gBattleMons[target1].hp != 0)
                         chosenTarget = target1, effect++;
                 }
 
@@ -6192,30 +5971,6 @@ bool32 TryPrimalReversion(u32 battler)
     return FALSE;
 }
 
-bool32 IsNeutralizingGasBannedAbility(u32 ability)
-{
-    switch (ability)
-    {
-    case ABILITY_MULTITYPE:
-    case ABILITY_ZEN_MODE:
-    case ABILITY_STANCE_CHANGE:
-    case ABILITY_POWER_CONSTRUCT:
-    case ABILITY_SCHOOLING:
-    case ABILITY_RKS_SYSTEM:
-    case ABILITY_SHIELDS_DOWN:
-    case ABILITY_COMATOSE:
-    case ABILITY_DISGUISE:
-    case ABILITY_GULP_MISSILE:
-    case ABILITY_ICE_FACE:
-    case ABILITY_AS_ONE_ICE_RIDER:
-    case ABILITY_AS_ONE_SHADOW_RIDER:
-    case ABILITY_ZERO_TO_HERO:
-        return TRUE;
-    default:
-        return FALSE;
-    }
-}
-
 bool32 IsNeutralizingGasOnField(void)
 {
     u32 i;
@@ -6249,10 +6004,13 @@ bool32 IsMoldBreakerTypeAbility(u32 ability)
 
 u32 GetBattlerAbility(u32 battler)
 {
+    if (gAbilities[gBattleMons[battler].ability].cantBeSuppressed)
+        return gBattleMons[battler].ability;
+
     if (gStatuses3[battler] & STATUS3_GASTRO_ACID)
         return ABILITY_NONE;
 
-    if (IsNeutralizingGasOnField() && !IsNeutralizingGasBannedAbility(gBattleMons[battler].ability))
+    if (IsNeutralizingGasOnField() && gBattleMons[battler].ability != ABILITY_NEUTRALIZING_GAS)
         return ABILITY_NONE;
 
     if (IsMyceliumMightOnField())
@@ -6261,7 +6019,7 @@ u32 GetBattlerAbility(u32 battler)
     if (((IsMoldBreakerTypeAbility(gBattleMons[gBattlerAttacker].ability)
             && !(gStatuses3[gBattlerAttacker] & STATUS3_GASTRO_ACID))
             || gBattleMoves[gCurrentMove].ignoresTargetAbility)
-            && sAbilitiesAffectedByMoldBreaker[gBattleMons[battler].ability]
+            && gAbilities[gBattleMons[battler].ability].breakable
             && gBattlerByTurnOrder[gCurrentTurnActionNumber] == gBattlerAttacker
             && gActionsByTurnOrder[gBattlerByTurnOrder[gBattlerAttacker]] == B_ACTION_USE_MOVE
             && gCurrentTurnActionNumber < gBattlersCount)
@@ -6669,13 +6427,13 @@ static u8 TrySetEnigmaBerry(u32 battler)
     return 0;
 }
 
-static u8 DamagedStatBoostBerryEffect(u32 battler, u8 statId, u8 split)
+static u8 DamagedStatBoostBerryEffect(u32 battler, u8 statId, u8 category)
 {
     if (IsBattlerAlive(battler)
      && CompareStat(battler, statId, MAX_STAT_STAGE, CMP_LESS_THAN)
      && (gBattleScripting.overrideBerryRequirements
          || (!DoesSubstituteBlockMove(gBattlerAttacker, battler, gCurrentMove)
-             && GetBattleMoveSplit(gCurrentMove) == split
+             && GetBattleMoveCategory(gCurrentMove) == category
              && TARGET_TURN_DAMAGED))
         )
     {
@@ -6954,11 +6712,11 @@ static u8 ItemEffectMoveEnd(u32 battler, u16 holdEffect)
         break;
     case HOLD_EFFECT_KEE_BERRY:  // consume and boost defense if used physical move
         if (B_BERRIES_INSTANT >= GEN_4)
-            effect = DamagedStatBoostBerryEffect(battler, STAT_DEF, SPLIT_PHYSICAL);
+            effect = DamagedStatBoostBerryEffect(battler, STAT_DEF, BATTLE_CATEGORY_PHYSICAL);
         break;
     case HOLD_EFFECT_MARANGA_BERRY:  // consume and boost sp. defense if used special move
         if (B_BERRIES_INSTANT >= GEN_4)
-            effect = DamagedStatBoostBerryEffect(battler, STAT_SPDEF, SPLIT_SPECIAL);
+            effect = DamagedStatBoostBerryEffect(battler, STAT_SPDEF, BATTLE_CATEGORY_SPECIAL);
         break;
     case HOLD_EFFECT_RANDOM_STAT_UP:
         if (B_BERRIES_INSTANT >= GEN_4)
@@ -7734,7 +7492,7 @@ u8 ItemBattleEffects(u8 caseID, u32 battler, bool32 moveTurn)
                 {
                     gBattleScripting.moveEffect = MOVE_EFFECT_FLINCH;
                     BattleScriptPushCursor();
-                    SetMoveEffect(FALSE, 0);
+                    SetMoveEffect(FALSE, FALSE);
                     BattleScriptPop();
                 }
             }
@@ -7938,10 +7696,10 @@ u8 ItemBattleEffects(u8 caseID, u32 battler, bool32 moveTurn)
                 }
                 break;
             case HOLD_EFFECT_KEE_BERRY:  // consume and boost defense if used physical move
-                effect = DamagedStatBoostBerryEffect(battler, STAT_DEF, SPLIT_PHYSICAL);
+                effect = DamagedStatBoostBerryEffect(battler, STAT_DEF, BATTLE_CATEGORY_PHYSICAL);
                 break;
             case HOLD_EFFECT_MARANGA_BERRY:  // consume and boost sp. defense if used special move
-                effect = DamagedStatBoostBerryEffect(battler, STAT_SPDEF, SPLIT_SPECIAL);
+                effect = DamagedStatBoostBerryEffect(battler, STAT_SPDEF, BATTLE_CATEGORY_SPECIAL);
                 break;
             case HOLD_EFFECT_STICKY_BARB:
                 if (TARGET_TURN_DAMAGED
@@ -8363,6 +8121,8 @@ bool32 IsBattlerProtected(u32 battler, u32 move)
         return TRUE;
     else if (gProtectStructs[battler].banefulBunkered)
         return TRUE;
+    else if (gProtectStructs[battler].burningBulwarked)
+        return TRUE;
     else if ((gProtectStructs[battler].obstructed || gProtectStructs[battler].silkTrapped) && !IS_MOVE_STATUS(move))
         return TRUE;
     else if (gProtectStructs[battler].spikyShielded)
@@ -8703,21 +8463,13 @@ static inline u32 CalcMoveBasePower(u32 move, u32 battlerAtk, u32 battlerDef, u3
     case EFFECT_NATURAL_GIFT:
         basePower = gNaturalGiftTable[ITEM_TO_BERRY(gBattleMons[battlerAtk].item)].power;
         break;
-    case EFFECT_WAKE_UP_SLAP:
-        if (gBattleMons[battlerDef].status1 & STATUS1_SLEEP || abilityDef == ABILITY_COMATOSE)
-            basePower *= 2;
-        break;
-    case EFFECT_SMELLING_SALTS:
-        if (gBattleMons[battlerDef].status1 & STATUS1_PARALYSIS)
+    case EFFECT_DOUBLE_POWER_ON_ARG_STATUS:
+        // Comatose targets treated as if asleep
+        if ((gBattleMons[battlerDef].status1 | (STATUS1_SLEEP * (abilityDef == ABILITY_COMATOSE))) & gBattleMoves[move].argument)
             basePower *= 2;
         break;
     case EFFECT_WRING_OUT:
         basePower = 120 * gBattleMons[battlerDef].hp / gBattleMons[battlerDef].maxHP;
-        break;
-    case EFFECT_HEX:
-    case EFFECT_INFERNAL_PARADE:
-        if (gBattleMons[battlerDef].status1 & STATUS1_ANY || abilityDef == ABILITY_COMATOSE)
-            basePower *= 2;
         break;
     case EFFECT_ASSURANCE:
         if (gProtectStructs[battlerDef].physicalDmg != 0 || gProtectStructs[battlerDef].specialDmg != 0 || gProtectStructs[battlerDef].confusionSelfDmg)
@@ -8869,6 +8621,10 @@ static inline u32 CalcMoveBasePower(u32 move, u32 battlerAtk, u32 battlerDef, u3
         basePower += 50 * gBattleStruct->timesGotHit[GetBattlerSide(battlerAtk)][gBattlerPartyIndexes[battlerAtk]];
         basePower = (basePower > 350) ? 350 : basePower;
         break;
+    case EFFECT_FICKLE_BEAM:
+        if (RandomPercentage(RNG_FICKLE_BEAM, 30))
+            basePower *= 2;
+        break;
     }
 
     // Move-specific base power changes
@@ -8903,11 +8659,6 @@ static inline u32 CalcMoveBasePowerAfterModifiers(u32 move, u32 battlerAtk, u32 
         break;
     case EFFECT_BRINE:
         if (gBattleMons[battlerDef].hp <= (gBattleMons[battlerDef].maxHP / 2))
-            modifier = uq4_12_multiply(modifier, UQ_4_12(2.0));
-        break;
-    case EFFECT_BARB_BARRAGE:
-    case EFFECT_VENOSHOCK:
-        if (gBattleMons[battlerDef].status1 & STATUS1_PSN_ANY)
             modifier = uq4_12_multiply(modifier, UQ_4_12(2.0));
         break;
     case EFFECT_RETALIATE:
@@ -9989,6 +9740,7 @@ s32 CalculateMoveDamageVars(u32 move, u32 battlerAtk, u32 battlerDef, u32 moveTy
 static inline void MulByTypeEffectiveness(uq4_12_t *modifier, u32 move, u32 moveType, u32 battlerDef, u32 defType, u32 battlerAtk, bool32 recordAbilities)
 {
     uq4_12_t mod = GetTypeModifier(moveType, defType);
+    u32 abilityAtk = GetBattlerAbility(battlerAtk);
 
     if (mod == UQ_4_12(0.0) && GetBattlerHoldEffect(battlerDef, TRUE) == HOLD_EFFECT_RING_TARGET)
     {
@@ -10000,11 +9752,13 @@ static inline void MulByTypeEffectiveness(uq4_12_t *modifier, u32 move, u32 move
     {
         mod = UQ_4_12(1.0);
     }
-    else if ((moveType == TYPE_FIGHTING || moveType == TYPE_NORMAL) && defType == TYPE_GHOST && GetBattlerAbility(battlerAtk) == ABILITY_SCRAPPY && mod == UQ_4_12(0.0))
+    else if ((moveType == TYPE_FIGHTING || moveType == TYPE_NORMAL) && defType == TYPE_GHOST
+        && (abilityAtk == ABILITY_SCRAPPY || abilityAtk == ABILITY_MINDS_EYE)
+        && mod == UQ_4_12(0.0))
     {
         mod = UQ_4_12(1.0);
         if (recordAbilities)
-            RecordAbilityBattle(battlerAtk, ABILITY_SCRAPPY);
+            RecordAbilityBattle(battlerAtk, abilityAtk);
     }
 
     if (moveType == TYPE_PSYCHIC && defType == TYPE_DARK && gStatuses3[battlerDef] & STATUS3_MIRACLE_EYED && mod == UQ_4_12(0.0))
@@ -10075,7 +9829,7 @@ static inline uq4_12_t CalcTypeEffectivenessMultiplierInternal(u32 move, u32 mov
     if (recordAbilities && (illusionSpecies = GetIllusionMonSpecies(battlerDef)))
         TryNoticeIllusionInTypeEffectiveness(move, moveType, battlerAtk, battlerDef, modifier, illusionSpecies);
 
-    if (gBattleMoves[move].split == SPLIT_STATUS && move != MOVE_THUNDER_WAVE)
+    if (gBattleMoves[move].category == BATTLE_CATEGORY_STATUS && move != MOVE_THUNDER_WAVE)
     {
         modifier = UQ_4_12(1.0);
         if (B_GLARE_GHOST < GEN_4 && move == MOVE_GLARE && IS_BATTLER_OF_TYPE(battlerDef, TYPE_GHOST))
@@ -10177,6 +9931,29 @@ static uq4_12_t GetInverseTypeMultiplier(uq4_12_t multiplier)
     default:
         return UQ_4_12(1.0);
     }
+}
+
+uq4_12_t GetTypeEffectiveness(struct Pokemon *mon, u8 moveType)
+{
+    uq4_12_t modifier = UQ_4_12(1.0);
+    u16 abilityDef = GetMonAbility(mon);
+    u16 speciesDef = GetMonData(mon, MON_DATA_SPECIES);
+    u8 type1 = gSpeciesInfo[speciesDef].types[0];
+    u8 type2 = gSpeciesInfo[speciesDef].types[1];
+
+    if (moveType != TYPE_MYSTERY)
+    {
+        MulByTypeEffectiveness(&modifier, MOVE_POUND, moveType, 0, type1, 0, FALSE);
+        if (type2 != type1)
+            MulByTypeEffectiveness(&modifier, MOVE_POUND, moveType, 0, type2, 0, FALSE);
+
+        if (moveType == TYPE_GROUND && abilityDef == ABILITY_LEVITATE)
+            modifier = UQ_4_12(0.0);
+        if (abilityDef == ABILITY_WONDER_GUARD && modifier <= UQ_4_12(1.0))
+            modifier = UQ_4_12(0.0);
+    }
+    
+    return modifier;
 }
 
 uq4_12_t GetTypeModifier(u32 atkType, u32 defType)
@@ -10423,6 +10200,7 @@ u16 GetBattleFormChangeTargetSpecies(u32 battler, u16 method)
     u16 targetSpecies = SPECIES_NONE;
     u16 species = gBattleMons[battler].species;
     const struct FormChange *formChanges = GetSpeciesFormChanges(species);
+    struct Pokemon *mon = &GetBattlerParty(battler)[gBattlerPartyIndexes[battler]];
     u16 heldItem;
 
     if (formChanges != NULL)
@@ -10470,8 +10248,8 @@ u16 GetBattleFormChangeTargetSpecies(u32 battler, u16 method)
                     }
                     break;
                 case FORM_CHANGE_BATTLE_GIGANTAMAX:
-                    // TODO: check Gigantamax factor
-                    targetSpecies = formChanges[i].targetSpecies;
+                    if (GetMonData(mon, MON_DATA_GIGANTAMAX_FACTOR))
+                        targetSpecies = formChanges[i].targetSpecies;
                     break;
                 case FORM_CHANGE_BATTLE_WEATHER:
                     // Check if there is a required ability and if the battler's ability does not match it
@@ -10707,23 +10485,23 @@ bool32 ShouldGetStatBadgeBoost(u16 badgeFlag, u32 battler)
     return FALSE;
 }
 
-u8 GetBattleMoveSplit(u32 moveId)
+u8 GetBattleMoveCategory(u32 moveId)
 {
     if (gBattleStruct != NULL && gBattleStruct->zmove.active && !IS_MOVE_STATUS(moveId))
-        return gBattleStruct->zmove.activeSplit;
+        return gBattleStruct->zmove.activeCategory;
     if (gBattleStruct != NULL && IsMaxMove(moveId)) // TODO: Might be buggy depending on when this is called.
-        return gBattleStruct->dynamax.activeSplit;
+        return gBattleStruct->dynamax.activeCategory;
     if (gBattleStruct != NULL && gBattleStruct->swapDamageCategory) // Photon Geyser, Shell Side Arm, Light That Burns the Sky
-        return SPLIT_PHYSICAL;
+        return BATTLE_CATEGORY_PHYSICAL;
     if (B_PHYSICAL_SPECIAL_SPLIT >= GEN_4)
-        return gBattleMoves[moveId].split;
+        return gBattleMoves[moveId].category;
 
     if (IS_MOVE_STATUS(moveId))
-        return SPLIT_STATUS;
+        return BATTLE_CATEGORY_STATUS;
     else if (gBattleMoves[moveId].type < TYPE_MYSTERY)
-        return SPLIT_PHYSICAL;
+        return BATTLE_CATEGORY_PHYSICAL;
     else
-        return SPLIT_SPECIAL;
+        return BATTLE_CATEGORY_SPECIAL;
 }
 
 static bool32 TryRemoveScreens(u32 battler)
@@ -10765,7 +10543,7 @@ static bool32 IsUnnerveAbilityOnOpposingSide(u32 battler)
 }
 
 // Photon geyser & light that burns the sky
-u8 GetSplitBasedOnStats(u32 battler)
+u8 GetCategoryBasedOnStats(u32 battler)
 {
     u32 attack = gBattleMons[battler].attack;
     u32 spAttack = gBattleMons[battler].spAttack;
@@ -10777,9 +10555,9 @@ u8 GetSplitBasedOnStats(u32 battler)
     spAttack = spAttack / gStatStageRatios[gBattleMons[battler].statStages[STAT_SPATK]][1];
 
     if (spAttack >= attack)
-        return SPLIT_SPECIAL;
+        return BATTLE_CATEGORY_SPECIAL;
     else
-        return SPLIT_PHYSICAL;
+        return BATTLE_CATEGORY_PHYSICAL;
 }
 
 static u32 GetFlingPowerFromItemId(u32 itemId)
@@ -10808,84 +10586,6 @@ bool32 CanFling(u32 battler)
         return FALSE;
 
     return TRUE;
-}
-
-// Ability checks
-bool32 IsRolePlayBannedAbilityAtk(u16 ability)
-{
-    u32 i;
-    for (i = 0; i < ARRAY_COUNT(sRolePlayBannedAttackerAbilities); i++)
-    {
-        if (ability == sRolePlayBannedAttackerAbilities[i])
-            return TRUE;
-    }
-    return FALSE;
-}
-
-bool32 IsRolePlayBannedAbility(u16 ability)
-{
-    u32 i;
-    for (i = 0; i < ARRAY_COUNT(sRolePlayBannedAbilities); i++)
-    {
-        if (ability == sRolePlayBannedAbilities[i])
-            return TRUE;
-    }
-    return FALSE;
-}
-
-bool32 IsSkillSwapBannedAbility(u16 ability)
-{
-    u32 i;
-    for (i = 0; i < ARRAY_COUNT(sSkillSwapBannedAbilities); i++)
-    {
-        if (ability == sSkillSwapBannedAbilities[i])
-            return TRUE;
-    }
-    return FALSE;
-}
-
-bool32 IsWorrySeedBannedAbility(u16 ability)
-{
-    u32 i;
-    for (i = 0; i < ARRAY_COUNT(sWorrySeedBannedAbilities); i++)
-    {
-        if (ability == sWorrySeedBannedAbilities[i])
-            return TRUE;
-    }
-    return FALSE;
-}
-
-bool32 IsGastroAcidBannedAbility(u16 ability)
-{
-    u32 i;
-    for (i = 0; i < ARRAY_COUNT(sGastroAcidBannedAbilities); i++)
-    {
-        if (ability == sGastroAcidBannedAbilities[i])
-            return TRUE;
-    }
-    return FALSE;
-}
-
-bool32 IsEntrainmentBannedAbilityAttacker(u16 ability)
-{
-    u32 i;
-    for (i = 0; i < ARRAY_COUNT(sEntrainmentBannedAttackerAbilities); i++)
-    {
-        if (ability == sEntrainmentBannedAttackerAbilities[i])
-            return TRUE;
-    }
-    return FALSE;
-}
-
-bool32 IsEntrainmentTargetOrSimpleBeamBannedAbility(u16 ability)
-{
-    u32 i;
-    for (i = 0; i < ARRAY_COUNT(sEntrainmentTargetSimpleBeamBannedAbilities); i++)
-    {
-        if (ability == sEntrainmentTargetSimpleBeamBannedAbilities[i])
-            return TRUE;
-    }
-    return FALSE;
 }
 
 // Sort an array of battlers by speed
@@ -11253,20 +10953,26 @@ bool32 AreBattlersOfSameGender(u32 battler1, u32 battler2)
     return (gender1 != MON_GENDERLESS && gender2 != MON_GENDERLESS && gender1 == gender2);
 }
 
-u32 CalcSecondaryEffectChance(u32 battler, u8 secondaryEffectChance, u16 moveEffect)
+u32 CalcSecondaryEffectChance(u32 battler, u32 battlerAbility, const struct AdditionalEffect *additionalEffect)
 {
-    bool8 hasSereneGrace = (GetBattlerAbility(battler) == ABILITY_SERENE_GRACE);
+    bool8 hasSereneGrace = (battlerAbility == ABILITY_SERENE_GRACE);
     bool8 hasRainbow = (gSideStatuses[GetBattlerSide(battler)] & SIDE_STATUS_RAINBOW) != 0;
+    u16 secondaryEffectChance = additionalEffect->chance;
 
-    if (hasRainbow && hasSereneGrace && moveEffect == EFFECT_FLINCH_HIT)
-        return secondaryEffectChance *= 2;
+    if (hasRainbow && hasSereneGrace && additionalEffect->moveEffect == MOVE_EFFECT_FLINCH)
+        return secondaryEffectChance * 2;
 
     if (hasSereneGrace)
         secondaryEffectChance *= 2;
-    if (hasRainbow && moveEffect != EFFECT_SECRET_POWER)
+    if (hasRainbow && additionalEffect->moveEffect != MOVE_EFFECT_SECRET_POWER)
         secondaryEffectChance *= 2;
 
     return secondaryEffectChance;
+}
+
+bool32 MoveEffectIsGuaranteed(u32 battler, u32 battlerAbility, const struct AdditionalEffect *additionalEffect)
+{
+    return additionalEffect->chance == 0 || CalcSecondaryEffectChance(battler, battlerAbility, additionalEffect) >= 100;
 }
 
 bool32 IsAlly(u32 battlerAtk, u32 battlerDef)
@@ -11281,6 +10987,47 @@ bool32 IsGen6ExpShareEnabled(void)
 #else
     return FlagGet(I_EXP_SHARE_FLAG);
 #endif
+}
+
+bool32 MoveHasMoveEffect(u32 move, u32 moveEffect)
+{
+    u32 i;
+    for (i = 0; i < gBattleMoves[move].numAdditionalEffects; i++)
+    {
+        if (gBattleMoves[move].additionalEffects[i].moveEffect == moveEffect
+            && gBattleMoves[move].additionalEffects[i].self == FALSE)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+bool32 MoveHasMoveEffectWithChance(u32 move, u32 moveEffect, u32 chance)
+{
+    u32 i;
+    for (i = 0; i < gBattleMoves[move].numAdditionalEffects; i++)
+    {
+        if (gBattleMoves[move].additionalEffects[i].moveEffect == moveEffect
+            && gBattleMoves[move].additionalEffects[i].chance == chance)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+bool32 MoveHasMoveEffectSelf(u32 move, u32 moveEffect)
+{
+    u32 i;
+    for (i = 0; i < gBattleMoves[move].numAdditionalEffects; i++)
+    {
+        if (gBattleMoves[move].additionalEffects[i].moveEffect == moveEffect
+            && gBattleMoves[move].additionalEffects[i].self == TRUE)
+            return TRUE;
+    }
+    return FALSE;
+}
+
+bool32 MoveHasMoveEffectSelfArg(u32 move, u32 moveEffect, u32 argument)
+{
+    return (gBattleMoves[move].argument == argument) && MoveHasMoveEffectSelf(move, moveEffect);
 }
 
 bool8 CanMonParticipateInSkyBattle(struct Pokemon *mon)
@@ -11354,4 +11101,14 @@ u8 GetBattlerType(u32 battler, u8 typeIndex)
     }
 
     return types[typeIndex];
+}
+
+void RemoveBattlerType(u32 battler, u8 type)
+{
+    u32 i;
+    for (i = 0; i < 3; i++)
+    {
+        if (*(u8 *)(&gBattleMons[battler].type1 + i) == type)
+            *(u8 *)(&gBattleMons[battler].type1 + i) = TYPE_MYSTERY;
+    }
 }

@@ -4,7 +4,7 @@
 SINGLE_BATTLE_TEST("Parental Bond converts Tackle into a two-strike move")
 {
     GIVEN {
-        ASSUME(gBattleMoves[MOVE_TACKLE].split != SPLIT_STATUS);
+        ASSUME(gBattleMoves[MOVE_TACKLE].category != BATTLE_CATEGORY_STATUS);
         ASSUME(gBattleMoves[MOVE_TACKLE].strikeCount < 2);
         ASSUME(gBattleMoves[MOVE_TACKLE].effect == EFFECT_HIT);
         PLAYER(SPECIES_KANGASKHAN) { Item(ITEM_KANGASKHANITE); }
@@ -27,7 +27,7 @@ SINGLE_BATTLE_TEST("Parental Bond converts Tackle into a two-strike move")
 SINGLE_BATTLE_TEST("Parental Bond does not convert a move with three or more strikes to a two-strike move")
 {
     GIVEN {
-        ASSUME(gBattleMoves[MOVE_TRIPLE_KICK].split != SPLIT_STATUS);
+        ASSUME(gBattleMoves[MOVE_TRIPLE_KICK].category != BATTLE_CATEGORY_STATUS);
         ASSUME(gBattleMoves[MOVE_TRIPLE_KICK].strikeCount == 3);
         PLAYER(SPECIES_KANGASKHAN) { Item(ITEM_KANGASKHANITE); }
         OPPONENT(SPECIES_WOBBUFFET);

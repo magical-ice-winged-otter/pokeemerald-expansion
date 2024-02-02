@@ -16,6 +16,7 @@
 #include "constants/pokemon.h"
 #include "constants/easy_chat.h"
 #include "constants/trainer_hill.h"
+#include "constants/items.h"
 
 // Prevent cross-jump optimization.
 #define BLOCK_CROSS_JUMP asm("");
@@ -36,6 +37,7 @@
 #define INCBIN_S8   INCBIN
 #define INCBIN_S16  INCBIN
 #define INCBIN_S32  INCBIN
+#define INCBIN_COMP INCBIN
 #endif // IDE support
 
 #define ARRAY_COUNT(array) (size_t)(sizeof(array) / sizeof((array)[0]))
@@ -65,6 +67,8 @@
 #else
 #define SAFE_DIV(a, b) ((a) / (b))
 #endif
+
+#define IS_POW_OF_TWO(n) (((n) & ((n)-1)) == 0)
 
 // The below macro does a%n, but (to match) will switch to a&(n-1) if n is a power of 2.
 // There are cases where GF does a&(n-1) where we would really like to have a%n, because
@@ -129,8 +133,8 @@
 #define CAT(a, b) CAT_(a, b)
 #define CAT_(a, b) a ## b
 
-#define STR(a) STR_(a)
-#define STR_(a) #a
+#define STR(...) STR_(__VA_ARGS__)
+#define STR_(...) #__VA_ARGS__
 
 // Converts a string to a compound literal, essentially making it a pointer to const u8
 #define COMPOUND_STRING(str) (const u8[]) _(str)
@@ -225,7 +229,11 @@ struct BerryPickingResults
 struct PyramidBag
 {
     u16 itemId[FRONTIER_LVL_MODE_COUNT][PYRAMID_BAG_ITEMS_COUNT];
+#if MAX_PYRAMID_BAG_ITEM_CAPACITY > 255
+    u16 quantity[FRONTIER_LVL_MODE_COUNT][PYRAMID_BAG_ITEMS_COUNT];
+#else
     u8 quantity[FRONTIER_LVL_MODE_COUNT][PYRAMID_BAG_ITEMS_COUNT];
+#endif
 };
 
 struct BerryCrush
@@ -509,7 +517,7 @@ struct SaveBlock2
     /*0x90*/ u8 filler_90[0x8];
     /*0x98*/ struct Time localTimeOffset;
     /*0xA0*/ struct Time lastBerryTreeUpdate;
-    /*0xA8*/ u32 gcnLinkFlags; // Read by Pokemon Colosseum/XD
+    /*0xA8*/ u32 gcnLinkFlags; // Read by Pokémon Colosseum/XD
     /*0xAC*/ u32 encryptionKey;
     /*0xB0*/ struct PlayersApprentice playerApprentice;
     /*0xDC*/ struct Apprentice apprentices[APPRENTICE_COUNT];
@@ -738,7 +746,8 @@ struct ContestWinner
     u8 contestCategory;
     u8 monName[POKEMON_NAME_LENGTH + 1];
     u8 trainerName[PLAYER_NAME_LENGTH + 1];
-    u8 contestRank;
+    u8 contestRank:7;
+    bool8 isShiny:1;
     //u8 padding;
 };
 
@@ -1066,5 +1075,9 @@ struct MapPosition
     s16 y;
     s8 elevation;
 };
+
+// Adds support for compressed OW graphics,
+// (Also compresses pokemon follower graphics)
+#define OW_GFX_COMPRESS TRUE
 
 #endif // GUARD_GLOBAL_H

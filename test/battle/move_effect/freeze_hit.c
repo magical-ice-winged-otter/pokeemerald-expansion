@@ -3,7 +3,7 @@
 
 ASSUMPTIONS
 {
-    ASSUME(gBattleMoves[MOVE_POWDER_SNOW].effect == EFFECT_FREEZE_HIT);
+    ASSUME(MoveHasMoveEffect(MOVE_POWDER_SNOW, MOVE_EFFECT_FREEZE_OR_FROSTBITE) == TRUE);
     ASSUME(gBattleMoves[MOVE_BLIZZARD].accuracy == 70);
 }
 
@@ -64,5 +64,34 @@ SINGLE_BATTLE_TEST("Blizzard bypasses accuracy checks in Hail and Snow")
         TURN { MOVE(opponent, move); MOVE(player, MOVE_BLIZZARD); }
     } SCENE {
         NOT MESSAGE("Wobbuffet's attack missed!");
+    }
+}
+
+#if B_STATUS_TYPE_IMMUNITY > GEN_1
+SINGLE_BATTLE_TEST("Freezing Glare should freeze Psychic-types")
+#else
+SINGLE_BATTLE_TEST("Freezing Glare shouldn't freeze Psychic-types")
+#endif
+{
+    GIVEN {
+        ASSUME(gSpeciesInfo[SPECIES_ARTICUNO_GALARIAN].types[0] == TYPE_PSYCHIC);
+        ASSUME(MoveHasMoveEffect(MOVE_FREEZING_GLARE, MOVE_EFFECT_FREEZE_OR_FROSTBITE) == TRUE);
+        ASSUME(gBattleMoves[MOVE_FREEZING_GLARE].type == TYPE_PSYCHIC);
+        PLAYER(SPECIES_ARTICUNO_GALARIAN);
+        OPPONENT(SPECIES_ARTICUNO_GALARIAN);
+    } WHEN {
+        TURN { MOVE(player, MOVE_FREEZING_GLARE); }
+    } SCENE {
+        ANIMATION(ANIM_TYPE_MOVE, MOVE_FREEZING_GLARE, player);
+        HP_BAR(opponent);
+        #if B_STATUS_TYPE_IMMUNITY > GEN_1
+            ANIMATION(ANIM_TYPE_STATUS, B_ANIM_STATUS_FRZ, opponent);
+            STATUS_ICON(opponent, freeze: TRUE);
+        #else
+            NONE_OF {
+                ANIMATION(ANIM_TYPE_STATUS, B_ANIM_STATUS_FRZ, opponent);
+                STATUS_ICON(opponent, freeze: TRUE);
+            }
+        #endif
     }
 }
