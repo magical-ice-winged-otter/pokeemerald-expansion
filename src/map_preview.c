@@ -462,9 +462,9 @@ void MapPreview_LoadGfx(u8 mapsec)
     idx = GetMapPreviewScreenIdx(mapsec);
     if (idx != MPS_COUNT)
     {
-       reset_temp_tile_data_buffers();
+       ResetTempTileDataBuffers();
        LoadPalette(sMapPreviewScreenData[idx].palptr, 0xD0, 0x60);
-       decompress_and_copy_tile_data_to_vram(0, sMapPreviewScreenData[idx].tilesptr, 0, 0, 0);
+       DecompressAndCopyTileDataToVram(0, sMapPreviewScreenData[idx].tilesptr, 0, 0, 0);
        if (GetBgTilemapBuffer(0) == NULL)
        {
            SetBgTilemapBuffer(0, Alloc(BG_SCREEN_SIZE));
@@ -490,7 +490,7 @@ static void MapPreview_Unload(s32 windowId)
 
 static bool32 MapPreview_IsGfxLoadFinished(void)
 {
-    return free_temp_tile_data_buffers_if_possible();
+    return FreeTempTileDataBuffersIfPossible();
 }
 
 void MapPreview_StartForestTransition(u8 mapsec)
@@ -513,21 +513,21 @@ void MapPreview_StartForestTransition(u8 mapsec)
     SetGpuRegBits(REG_OFFSET_WININ, WININ_WIN0_CLR | WININ_WIN1_CLR);
     SetGpuRegBits(REG_OFFSET_WINOUT, WINOUT_WIN01_CLR);
     gTasks[taskId].data[11] = MapPreview_CreateMapNameWindow(mapsec);
-    ScriptContext2_Enable();
+    ScriptContext_Enable();
 }
 
 static u16 MapPreview_CreateMapNameWindow(u8 mapsec)
 {
     u16 windowId;
     u32 xctr;
-    u8 color[0];
+    u8 color[3];
 
     windowId = AddWindow(&sMapNameWindow);
     FillWindowPixelBuffer(windowId, PIXEL_FILL(1));
     PutWindowTilemap(windowId);
-    color[0] = TEXT_COLOR_WHITE; // Access violation
-    color[1] = TEXT_COLOR_RED; // Access violation
-    color[2] = TEXT_COLOR_LIGHT_GREY; // Access violation
+    color[0] = TEXT_COLOR_WHITE;
+    color[1] = TEXT_COLOR_RED;
+    color[2] = TEXT_COLOR_LIGHT_GRAY;
     GetMapName(gStringVar4, mapsec, 0);
     xctr = 104 - GetStringWidth(2, gStringVar4, 0);
     AddTextPrinterParameterized4(windowId, 2, xctr / 2, 2, 0, 0, color/* Access violation */, -1, gStringVar4);
@@ -644,7 +644,9 @@ const struct MapPreviewScreen * GetDungeonMapPreviewScreenInfo(u8 mapsec)
 static u16 MapPreview_GetDuration(u8 mapsec)
 {
     u8 idx;
+    #if FLAG_BASED_MAP_PREVIEW_TIME
     u16 flagId;
+    #endif
 
     idx = GetMapPreviewScreenIdx(mapsec);
     if (idx == MPS_COUNT)
