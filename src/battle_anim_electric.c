@@ -1447,35 +1447,42 @@ static void AnimShockWaveProgressingBolt(struct Sprite *sprite)
     }
 }
 
+#define animState   data[0]
+#define finalY      data[15]
+#define animY       data[14]
+#define animX       data[13]
+#define subpriority data[12]
+#define animCount   data[10]
+
 void AnimTask_ShockWaveLightning(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
     u8 target = GetAnimBattlerId(gBattleAnimArgs[0]);
-
-    switch (task->data[0])
+    
+    switch (task->animState)
     {
-    case 0:
-        task->data[15] = GetBattlerSpriteCoord(target, BATTLER_COORD_Y) + 32;
-        task->data[14] = task->data[15];
-        while (task->data[14] > 16)
+    case 0: 
+        // this state sets up the initial animation state.
+        // it's done like this because: consider the case where we combine this (0) and the one below (1), then we would have to make a lot of these calculations/writes again.
+        task->finalY = GetBattlerSpriteCoord(target, BATTLER_COORD_Y) + 32;
+        task->animY = task->finalY;
+        while (task->animY > 16)
         {
-            task->data[14] -= 32;
+            task->animY -= 32;
         }
-
-        task->data[13] = GetBattlerSpriteCoord(target, BATTLER_COORD_X_2);
-        task->data[12] = GetBattlerSpriteSubpriority(target) - 2;
-        task->data[0]++;
+        //task->animY evaluates to 8 here.
+        task->animX = GetBattlerSpriteCoord(target, BATTLER_COORD_X_2);
+        task->subpriority = GetBattlerSpriteSubpriority(target) - 2;
+        task->animState++;
         break;
     case 1:
-        if (++task->data[1] > 1)
-        {
-            task->data[1] = 0;
-            if (CreateShockWaveLightningSprite(task, taskId))
-                task->data[0]++;
-        }
+        // the below if condition will run 3 times, as in the task will call the condition 3 times, where on the 3rd, it will return TRUE
+        if (CreateShockWaveLightningSprite(task, taskId))
+            task->animState++;
         break;
     case 2:
-        if (task->data[10] == 0)
+        // this case waits until all 3 lightning sprites are destroyed (see the callback)
+        if (task->animCount == 0)
             DestroyAnimVisualTask(taskId);
         break;
     }
@@ -1483,18 +1490,18 @@ void AnimTask_ShockWaveLightning(u8 taskId)
 
 static bool8 CreateShockWaveLightningSprite(struct Task *task, u8 taskId)
 {
-    u8 spriteId = CreateSprite(&gLightningSpriteTemplate, task->data[13], task->data[14], task->data[12]);
-
+    u8 spriteId = CreateSprite(&gLightningSpriteTemplate, task->animX, task->animY, task->subpriority);
     if (spriteId != MAX_SPRITES)
     {
         gSprites[spriteId].callback = AnimShockWaveLightning;
         gSprites[spriteId].data[6] = taskId;
         gSprites[spriteId].data[7] = 10;
-        task->data[10]++;
+        task->animCount++;
     }
-    if (task->data[14] >= task->data[15])
+    // if we shouldn't generate anymore lightning sprites (ie, we are past the boundary) return TRUE or stop the state.
+    if (task->animY >= task->finalY)
         return TRUE;
-    task->data[14] += 32;
+    task->animY += 32;
     return FALSE;
 }
 
@@ -1502,10 +1509,18 @@ static void AnimShockWaveLightning(struct Sprite *sprite)
 {
     if (sprite->animEnded)
     {
+        // sprite->data[7] should evaluate to data[10], which is animCount
         gTasks[sprite->data[6]].data[sprite->data[7]]--;
         DestroySprite(sprite);
     }
 }
+
+#undef animState
+#undef finalY
+#undef animY
+#undef animX
+#undef subpriority
+#undef animCount
 
 // Copy of Rain Dance's function but displays the ion sprite instead
 // arg 0: initial step
