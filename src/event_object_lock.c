@@ -98,7 +98,7 @@ void FreezeObjects_WaitForPlayerAndSelected(void)
 
 void ScriptUnfreezeObjectEvents(void)
 {
-    u8 playerObjectId = GetObjectEventIdByLocalIdAndMap(OBJ_EVENT_ID_PLAYER, 0, 0);
+    u8 playerObjectId = GetObjectEventIdByLocalIdAndMap(LOCALID_PLAYER, 0, 0);
     ObjectEventClearHeldMovementIfFinished(&gObjectEvents[playerObjectId]);
     ScriptMovement_UnfreezeObjectEvents();
     UnfreezeObjectEvents();
@@ -110,7 +110,7 @@ void UnionRoom_UnlockPlayerAndChatPartner(void)
 
     if (gObjectEvents[gSelectedObjectEvent].active)
         ObjectEventClearHeldMovementIfFinished(&gObjectEvents[gSelectedObjectEvent]);
-    playerObjectId = GetObjectEventIdByLocalIdAndMap(OBJ_EVENT_ID_PLAYER, 0, 0);
+    playerObjectId = GetObjectEventIdByLocalIdAndMap(LOCALID_PLAYER, 0, 0);
     ObjectEventClearHeldMovementIfFinished(&gObjectEvents[playerObjectId]);
     ScriptMovement_UnfreezeObjectEvents();
     UnfreezeObjectEvents();
@@ -151,6 +151,7 @@ static void Task_FreezeObjectAndPlayer(u8 taskId)
 void FreezeForApproachingTrainers(void)
 {
     u8 trainerObjectId1, trainerObjectId2, taskId;
+    struct ObjectEvent *followerObj = GetFollowerObject();
     trainerObjectId1 = GetChosenApproachingTrainerObjectEventId(0);
 
     if (gNoOfApproachingTrainers == 2)
@@ -188,6 +189,8 @@ void FreezeForApproachingTrainers(void)
             gTasks[taskId].tObjectFrozen = TRUE;
         }
     }
+    if (followerObj) // Unfreeze follower so it can move behind player
+        UnfreezeObjectEvent(followerObj);
 }
 
 bool8 IsFreezeObjectAndPlayerFinished(void)

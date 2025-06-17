@@ -372,6 +372,8 @@ static u8 *CopyConditionMonNameGender(u8 *str, u16 listId, bool8 skipPadding)
     while (*str_ != EOS)
         (str_++);
 
+    str_ = WrapFontIdToFit(str, str_, FONT_NORMAL, 57);
+
     *(str_++) = EXT_CTRL_CODE_BEGIN;
     *(str_++) = EXT_CTRL_CODE_SKIP;
     *(str_++) = 60;
@@ -536,7 +538,7 @@ static void ConditionGraphDrawMonPic(s16 listId, u8 loadId)
     isShiny = GetBoxOrPartyMonData(boxId, monId, MON_DATA_IS_SHINY, NULL);
     personality = GetBoxOrPartyMonData(boxId, monId, MON_DATA_PERSONALITY, NULL);
     LoadSpecialPokePic(menu->monPicGfx[loadId], species, personality, TRUE);
-    LZ77UnCompWram(GetMonSpritePalFromSpeciesAndPersonality(species, isShiny, personality), menu->monPal[loadId]);
+    memcpy(&menu->monPal[loadId], GetMonSpritePalFromSpeciesAndPersonality(species, isShiny, personality), 32);
 }
 
 u16 GetMonListCount(void)

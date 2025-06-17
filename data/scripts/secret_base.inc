@@ -144,7 +144,7 @@ SecretBase_EventScript_InitSecretBase::
 	end
 
 SecretBase_EventScript_FirstEntrance::
-	applymovement OBJ_EVENT_ID_PLAYER, SecretBase_Movement_EnterBase
+	applymovement LOCALID_PLAYER, SecretBase_Movement_EnterBase
 	waitmovement 0
 	setvar VAR_INIT_SECRET_BASE, 1
 	msgbox SecretBase_Text_WantToMakeYourSecretBaseHere, MSGBOX_YESNO
@@ -646,6 +646,7 @@ SecretBase_EventScript_BattleTrainer::
 	call_if_eq VAR_RESULT, B_OUTCOME_WON, SecretBase_EventScript_WonSecretBaseBattle
 	call_if_eq VAR_RESULT, B_OUTCOME_LOST, SecretBase_EventScript_LostSecretBaseBattle
 	special HealPlayerParty
+	callnative UpdateFollowingPokemon
 	release
 	end
 
