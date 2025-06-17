@@ -8243,18 +8243,13 @@ static bool32 DoSwitchInEffectsForBattler(u32 battler)
         {
             if (CanBePoisoned(gBattlerAttacker, battler, GetBattlerAbility(gBattlerAttacker), GetBattlerAbility(battler)))
             {
-                gBattleScripting.battler = battler;
-                BattleScriptPushCursor();
-                if (gSideTimers[GetBattlerSide(battler)].toxicSpikesAmount >= 2)
-                {
-                    gBattlescriptCurrInstr = BattleScript_ToxicSpikesBadlyPoisoned;
+                u32 tspikes = 0;
+                if (gSideTimers[GetBattlerSide(battler)].toxicSpikesAmount >= 2) {
+                    tspikes = 1;
                     gBattleMons[battler].status1 |= STATUS1_TOXIC_POISON;
                 }
                 else
-                {
-                    gBattlescriptCurrInstr = BattleScript_ToxicSpikesPoisoned;
                     gBattleMons[battler].status1 |= STATUS1_POISON;
-                }
 
                 BtlController_EmitSetMonData(battler, B_COMM_TO_CONTROLLER, REQUEST_STATUS_BATTLE, 0, sizeof(gBattleMons[battler].status1), &gBattleMons[battler].status1);
                 MarkBattlerForControllerExec(battler);
