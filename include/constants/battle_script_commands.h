@@ -213,14 +213,13 @@ enum CmdVarious
 #define DMG_DOUBLED             2
 #define DMG_1_8_TARGET_HP       3
 #define DMG_FULL_ATTACKER_HP    4
-#define DMG_CURR_ATTACKER_HP    5
-#define DMG_BIG_ROOT            6
+#define DMG_BIG_ROOT            5
 
 // Cmd_jumpifcantswitch
 #define SWITCH_IGNORE_ESCAPE_PREVENTION   (1 << 7)
 
 // Cmd_statbuffchange
-#define STAT_CHANGE_ALLOW_PTR               (1 << 0)   // If set, allow use of jumpptr. Set in every use of statbuffchange
+#define STAT_CHANGE_ALLOW_PTR               (1 << 0)   // If set, allow use of jumpptr. If not set and unable to raise/lower stats, jump to failInstr.
 #define STAT_CHANGE_MIRROR_ARMOR            (1 << 1)   // Stat change redirection caused by Mirror Armor ability.
 #define STAT_CHANGE_NOT_PROTECT_AFFECTED    (1 << 5)
 #define STAT_CHANGE_UPDATE_MOVE_EFFECT      (1 << 6)
@@ -278,6 +277,7 @@ enum MoveEndEffects
     MOVEEND_RED_CARD, // Red Card triggers before Eject Pack
     MOVEEND_EJECT_BUTTON,
     MOVEEND_LIFEORB_SHELLBELL, // Includes shell bell, throat spray, etc
+    MOVEEND_FORM_CHANGE,
     MOVEEND_EMERGENCY_EXIT,
     MOVEEND_EJECT_PACK,
     MOVEEND_HIT_ESCAPE,
@@ -301,5 +301,12 @@ enum MoveEndEffects
 #define ARG_SET_PSYCHIC_TERRAIN        0
 #define ARG_TRY_REMOVE_TERRAIN_HIT     1
 #define ARG_TRY_REMOVE_TERRAIN_FAIL    2
+
+enum StatusTrigger
+{
+    TRIGGER_ON_MOVE,
+    TRIGGER_ON_ABILITY,
+    TRIGGER_ON_ATTACKER,
+};
 
 #endif // GUARD_CONSTANTS_BATTLE_SCRIPT_COMMANDS_H
