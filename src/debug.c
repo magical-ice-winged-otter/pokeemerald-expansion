@@ -5006,6 +5006,8 @@ static void DebugAction_Sound_MUS_SelectId(u8 taskId)
     X(MUS_BW_RELIC_SONG) \
     X(MUS_BW_VS_WCS_CHAMPION) \
     X(MUS_BW_OBTAIN_BERRY) \
+    X(MUS_TH_HEAVEN_OF_SCARLET_PERCEPTION) \
+    X(MUS_TH_PHANTASMAGORIA_OF_DIM_DREAM) \
 
 #define SOUND_LIST_SE \
     X(SE_USE_ITEM) \

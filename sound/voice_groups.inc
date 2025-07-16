@@ -290,3 +290,4 @@
 .include "sound/voicegroups/voicegroup284.inc"
 .include "sound/voicegroups/voicegroup285.inc"
 .include "sound/voicegroups/voicegroup286.inc"
+.include "sound/voicegroups/voicegroup287.inc"

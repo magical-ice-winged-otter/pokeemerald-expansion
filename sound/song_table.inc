@@ -1168,6 +1168,8 @@ gSongTable::
 	song mus_bw_relic_song, 0, 0
 	song mus_bw_vs_wcs_champion, 0, 0
 	song mus_bw_obtain_berry, 2, 2
+	song mus_th_heaven_of_scarlet_perception, 0, 0
+	song mus_th_phantasmagoria_of_dim_dream, 0, 0
 
 	.align 2
 dummy_song_header:
